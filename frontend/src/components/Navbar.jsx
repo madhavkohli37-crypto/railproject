@@ -1,20 +1,28 @@
+import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 
 export default function Navbar() {
   const { user, logout } = useAuth();
+  const { isDark, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    // Realistic logout delay
+    await new Promise(r => setTimeout(r, 600));
     logout();
+    setIsLoggingOut(false);
     navigate('/');
   };
 
   const isActive = (path) => location.pathname === path;
 
   return (
-    <nav className="bg-[#1a3a6b] text-white shadow-lg sticky top-0 z-50">
+    <nav className="bg-[#1a3a6b] dark:bg-[#0a192f] text-white shadow-lg sticky top-0 z-50 transition-colors duration-300">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
@@ -27,6 +35,14 @@ export default function Navbar() {
 
           {/* Nav Links */}
           <div className="flex items-center space-x-2">
+            <button 
+              onClick={toggleTheme}
+              className="p-2 mr-2 rounded-full hover:bg-white/10 transition-colors text-xl"
+              title="Toggle Dark Mode"
+            >
+              {isDark ? '☀️' : '🌙'}
+            </button>
+            
             {user ? (
               <>
                 <Link
@@ -39,16 +55,18 @@ export default function Navbar() {
                 >
                   📊 Dashboard
                 </Link>
-                <Link
-                  to="/coolies"
-                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                    isActive('/coolies')
-                      ? 'bg-white/20 text-white'
-                      : 'text-gray-300 hover:text-white hover:bg-white/10'
-                  }`}
-                >
-                  🧳 Book Coolie
-                </Link>
+                {user.role === 'PASSENGER' && (
+                  <Link
+                    to="/book"
+                    className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                      isActive('/book')
+                        ? 'bg-white/20 text-white'
+                        : 'text-gray-300 hover:text-white hover:bg-white/10'
+                    }`}
+                  >
+                    🧳 Request Assistance
+                  </Link>
+                )}
 
                 <div className="flex items-center space-x-3 ml-4 border-l border-white/20 pl-4">
                   <div className="flex items-center space-x-2">
@@ -61,9 +79,17 @@ export default function Navbar() {
                   </div>
                   <button
                     onClick={handleLogout}
-                    className="bg-orange-500 hover:bg-orange-600 px-4 py-1.5 rounded-lg text-sm font-semibold transition-colors"
+                    disabled={isLoggingOut}
+                    className="bg-orange-500 hover:bg-orange-600 disabled:bg-orange-400 px-4 py-1.5 rounded-lg text-sm font-semibold transition-colors flex items-center space-x-2 w-[100px] justify-center"
                   >
-                    Logout
+                    {isLoggingOut ? (
+                      <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+                      </svg>
+                    ) : (
+                      <span>Logout</span>
+                    )}
                   </button>
                 </div>
               </>

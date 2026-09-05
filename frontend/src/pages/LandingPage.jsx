@@ -89,20 +89,20 @@ export default function LandingPage() {
       </section>
 
       {/* FEATURES */}
-      <section className="py-20 bg-white">
+      <section className="py-20 bg-white dark:bg-gray-800 transition-colors duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-14">
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">Why Choose RailAssist?</h2>
-            <p className="text-gray-500 text-lg max-w-xl mx-auto">
+            <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">Why Choose RailAssist?</h2>
+            <p className="text-gray-500 dark:text-gray-400 text-lg max-w-xl mx-auto">
               Everything you need for a comfortable railway journey, all in one place.
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             {features.map((f) => (
-              <div key={f.title} className="text-center p-6 rounded-2xl hover:bg-blue-50 transition-colors group">
+              <div key={f.title} className="text-center p-6 rounded-2xl hover:bg-blue-50 dark:hover:bg-gray-700 transition-colors group">
                 <div className="text-5xl mb-4">{f.icon}</div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">{f.title}</h3>
-                <p className="text-gray-500 text-sm leading-relaxed">{f.desc}</p>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{f.title}</h3>
+                <p className="text-gray-500 dark:text-gray-400 text-sm leading-relaxed">{f.desc}</p>
               </div>
             ))}
           </div>
@@ -110,17 +110,17 @@ export default function LandingPage() {
       </section>
 
       {/* STATIONS */}
-      <section className="py-20 bg-gray-50">
+      <section className="py-20 bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-14">
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">Available Stations</h2>
-            <p className="text-gray-500 text-lg">Serving major railway stations across India</p>
+            <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">Available Stations</h2>
+            <p className="text-gray-500 dark:text-gray-400 text-lg">Serving major railway stations across India</p>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
             {stations.map((s) => (
-              <div key={s.name} className="bg-white rounded-2xl p-5 text-center shadow-sm hover:shadow-md transition-all border border-gray-100 hover:border-blue-200 cursor-pointer">
+              <div key={s.name} className="bg-white dark:bg-gray-800 rounded-2xl p-5 text-center shadow-sm hover:shadow-md transition-all border border-gray-100 dark:border-gray-700 hover:border-blue-200 dark:hover:border-blue-500 cursor-pointer">
                 <div className="text-4xl mb-3">{s.icon}</div>
-                <h4 className="font-semibold text-gray-900 text-sm">{s.name}</h4>
+                <h4 className="font-semibold text-gray-900 dark:text-white text-sm">{s.name}</h4>
                 <p className="text-orange-500 text-xs font-medium mt-1">{s.coolies} coolies</p>
               </div>
             ))}
@@ -129,23 +129,23 @@ export default function LandingPage() {
       </section>
 
       {/* HOW IT WORKS */}
-      <section className="py-20 bg-white">
+      <section className="py-20 bg-white dark:bg-gray-800 transition-colors duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-14">
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">How It Works</h2>
-            <p className="text-gray-500 text-lg">Book your coolie in under 2 minutes</p>
+            <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">How It Works</h2>
+            <p className="text-gray-500 dark:text-gray-400 text-lg">Book your coolie in under 2 minutes</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             {steps.map((step, i) => (
               <div key={step.num} className="relative text-center">
-                <div className="w-16 h-16 rounded-full bg-[#1a3a6b] text-white text-xl font-bold flex items-center justify-center mx-auto mb-4">
+                <div className="w-16 h-16 rounded-full bg-[#1a3a6b] dark:bg-blue-600 text-white text-xl font-bold flex items-center justify-center mx-auto mb-4">
                   {step.num}
                 </div>
                 {i < steps.length - 1 && (
-                  <div className="hidden md:block absolute top-8 left-[60%] w-[80%] h-0.5 bg-gray-200"></div>
+                  <div className="hidden md:block absolute top-8 left-[60%] w-[80%] h-0.5 bg-gray-200 dark:bg-gray-700"></div>
                 )}
-                <h3 className="text-xl font-bold text-gray-900 mb-2">{step.title}</h3>
-                <p className="text-gray-500 text-sm">{step.desc}</p>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{step.title}</h3>
+                <p className="text-gray-500 dark:text-gray-400 text-sm">{step.desc}</p>
               </div>
             ))}
           </div>
@@ -153,7 +153,7 @@ export default function LandingPage() {
       </section>
 
       {/* CTA SECTION */}
-      <section className="py-20 bg-gradient-to-r from-[#1a3a6b] to-[#2563eb] text-white text-center">
+      <section className="py-20 bg-gradient-to-r from-[#1a3a6b] to-[#2563eb] dark:from-[#0f2347] dark:to-[#1a3a6b] text-white text-center">
         <div className="max-w-3xl mx-auto px-4">
           <h2 className="text-4xl font-bold mb-4">Ready to Travel Stress-Free?</h2>
           <p className="text-blue-200 text-lg mb-8">
@@ -169,11 +169,6 @@ export default function LandingPage() {
           )}
         </div>
       </section>
-
-      {/* FOOTER */}
-      <footer className="bg-[#0f2347] text-gray-400 py-8 text-center text-sm">
-        <p>🚂 RailAssist © {new Date().getFullYear()} · Making Indian Railway Travel Easier</p>
-      </footer>
     </div>
   );
 }

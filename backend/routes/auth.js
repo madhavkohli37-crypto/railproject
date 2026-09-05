@@ -31,19 +31,21 @@ router.post('/signup', async (req, res) => {
     const password_hash = await bcrypt.hash(password, 10);
     const userId = await nextId('users');
     
+    // Public signups are ALWAYS PASSENGER
     const user = {
       id: userId,
       name: name.trim(),
       email: normalizedEmail,
       password_hash,
       phone: phone || null,
+      role: 'PASSENGER',
       created_at: new Date().toISOString(),
     };
 
     await db.collection('users').insertOne(user);
 
     const token = jwt.sign(
-      { userId: user.id, name: user.name, email: user.email },
+      { userId: user.id, name: user.name, email: user.email, role: user.role },
       JWT_SECRET,
       { expiresIn: '7d' }
     );
@@ -51,7 +53,7 @@ router.post('/signup', async (req, res) => {
     res.status(201).json({
       message: 'Account created successfully!',
       token,
-      user: { id: user.id, name: user.name, email: user.email, phone: user.phone },
+      user: { id: user.id, name: user.name, email: user.email, phone: user.phone, role: user.role },
     });
   } catch (err) {
     console.error('Signup error:', err);
@@ -82,7 +84,7 @@ router.post('/login', async (req, res) => {
     }
 
     const token = jwt.sign(
-      { userId: user.id, name: user.name, email: user.email },
+      { userId: user.id, name: user.name, email: user.email, role: user.role || 'PASSENGER' },
       JWT_SECRET,
       { expiresIn: '7d' }
     );
@@ -90,7 +92,7 @@ router.post('/login', async (req, res) => {
     res.json({
       message: 'Login successful',
       token,
-      user: { id: user.id, name: user.name, email: user.email, phone: user.phone },
+      user: { id: user.id, name: user.name, email: user.email, phone: user.phone, role: user.role || 'PASSENGER' },
     });
   } catch (err) {
     console.error('Login error:', err);

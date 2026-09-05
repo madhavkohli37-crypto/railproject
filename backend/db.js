@@ -112,7 +112,14 @@ async function nextId(table) {
     { returnDocument: 'after' }
   );
 
-  return result.value.seq;
+  // MongoDB 6+ returns the document directly, earlier versions return { value: document }
+  const doc = result && result.value !== undefined ? result.value : result;
+  if (!doc) {
+    // Fallback if sequence document doesn't exist
+    await db.collection('sequences').insertOne({ _id: seqMap[table], seq: 1 });
+    return 1;
+  }
+  return doc.seq;
 }
 
 function getDB() {
