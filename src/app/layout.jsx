@@ -4,14 +4,85 @@ import { AuthProvider } from '@/context/AuthContext';
 import Navbar from '@/components/Navbar';
 import Link from 'next/link';
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://railassist.vercel.app';
+
 export const metadata = {
-  title: 'RailAssist - India\'s Railway Assistance Platform',
-  description: 'Book verified porters, wheelchair assistants, and meet & greet services at Indian railway stations. Safe, trusted, government-compliant.',
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: 'RailAssist - India\'s Railway Assistance Platform',
+    template: '%s | RailAssist',
+  },
+  description: 'RailAssist is India\'s trusted railway assistance platform. Book verified porters (coolies), wheelchair assistants, and meet & greet services at Indian railway stations.',
+  keywords: [
+    'RailAssist',
+    'railassist',
+    'rail assist',
+    'railway porter booking',
+    'coolie booking online',
+    'irctc coolie assistance',
+    'railway wheelchair booking',
+    'station assistance service',
+    'indian railway assistance',
+    'madhav kohli railassist'
+  ],
+  authors: [{ name: 'Madhav Kohli' }],
+  creator: 'Madhav Kohli',
+  publisher: 'RailAssist',
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
+  openGraph: {
+    title: 'RailAssist - India\'s Railway Assistance Platform',
+    description: 'Book verified porters, wheelchair attendants, and meet & greet services at 50+ Indian railway stations.',
+    url: siteUrl,
+    siteName: 'RailAssist',
+    locale: 'en_IN',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'RailAssist - Railway Assistance Services',
+    description: 'Making Indian Railway travel easier for senior citizens, families, and solo travellers.',
+  },
 };
 
+
 export default function RootLayout({ children }) {
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'WebApplication',
+    name: 'RailAssist',
+    url: siteUrl,
+    applicationCategory: 'TravelApplication',
+    operatingSystem: 'All',
+    description: 'Book verified railway porters, wheelchair assistance, and meet & greet services across Indian railway stations.',
+    author: {
+      '@type': 'Person',
+      name: 'Madhav Kohli',
+    },
+    offers: {
+      '@type': 'Offer',
+      price: '60',
+      priceCurrency: 'INR',
+    },
+  };
+
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      </head>
       <body className="min-h-screen bg-[#f5f7fa] dark:bg-[#0d1b2a] text-gray-900 dark:text-gray-100 transition-colors duration-300 flex flex-col justify-between">
         <ThemeProvider>
           <AuthProvider>
@@ -19,6 +90,7 @@ export default function RootLayout({ children }) {
             <main className="flex-1">
               {children}
             </main>
+
 
             {/* ── Footer ── */}
             <footer className="bg-[#003087] text-white mt-auto">
