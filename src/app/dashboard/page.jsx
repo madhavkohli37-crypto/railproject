@@ -257,6 +257,12 @@ function AdminView({ currentUser }) {
   // Show/hide hashed password per employee
   const [revealPwFor, setRevealPwFor] = useState({});
 
+  // Porter applications
+  const [applications, setApplications] = useState([]);
+  const [appsLoading, setAppsLoading] = useState(false);
+  const [appsError, setAppsError] = useState('');
+  const [appActionLoading, setAppActionLoading] = useState({});
+
   const fetchData = async () => {
     try {
       setLoading(true);
@@ -269,7 +275,35 @@ function AdminView({ currentUser }) {
     }
   };
 
+  const fetchApplications = async () => {
+    setAppsLoading(true);
+    setAppsError('');
+    try {
+      const res = await api.get('/admin/applications');
+      setApplications(res.data);
+    } catch {
+      setAppsError('Failed to load applications');
+    } finally {
+      setAppsLoading(false);
+    }
+  };
+
   useEffect(() => { fetchData(); }, []);
+  useEffect(() => { if (activeTab === 'applications') fetchApplications(); }, [activeTab]);
+
+  const handleApplicationAction = async (id, action) => {
+    setAppActionLoading(prev => ({ ...prev, [id]: action }));
+    try {
+      await api.patch(`/admin/applications/${id}`, { action });
+      fetchApplications();
+      fetchData(); // Refresh employee counts
+    } catch (err) {
+      alert(err.response?.data?.error || `Failed to ${action} application`);
+    } finally {
+      setAppActionLoading(prev => ({ ...prev, [id]: null }));
+    }
+  };
+
 
   const handleCreateEmployee = async (e) => {
     e.preventDefault();
@@ -319,14 +353,17 @@ function AdminView({ currentUser }) {
     }
   };
 
+  const pendingCount = applications.filter(a => a.status === 'PENDING').length;
   const TABS = [
     { id: 'overview', label: '📊 Overview' },
     { id: 'bookings', label: '🧳 Bookings' },
     { id: 'users', label: '👤 Users' },
     { id: 'employees', label: '👷 Employees' },
-    { id: 'audit_logs', label: '📋 Audit Logs' },
+    { id: 'applications', label: `📋 Applications${pendingCount > 0 ? ` (${pendingCount})` : ''}` },
+    { id: 'audit_logs', label: '🗒️ Audit Logs' },
     { id: 'settings', label: '⚙️ Settings' },
   ];
+
 
   const StatCard = ({ title, value, color }) => (
     <div className="card hover:shadow-md transition-all">
@@ -591,8 +628,106 @@ function AdminView({ currentUser }) {
         </div>
       )}
 
+      {/* ── Applications (Porter Self-Registration) ── */}
+      {activeTab === 'applications' && (
+        <div className="space-y-4">
+          <div className="flex justify-between items-center">
+            <div>
+              <h2 className="text-lg font-bold text-gray-900 dark:text-white">Porter Applications</h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Review self-registered porter applications. Approve to activate their account.</p>
+            </div>
+            <button onClick={fetchApplications} className="px-3 py-1.5 text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg font-medium shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700">
+              🔄 Refresh
+            </button>
+          </div>
+
+          {appsError && <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 p-4 rounded-xl">⚠️ {appsError}</div>}
+
+          {appsLoading ? (
+            <div className="space-y-3">{[1,2,3].map(i => <div key={i} className="card animate-pulse h-28" />)}</div>
+          ) : applications.length === 0 ? (
+            <div className="card text-center py-12">
+              <div className="text-5xl mb-3">📭</div>
+              <h3 className="font-bold dark:text-white mb-1">No Applications Yet</h3>
+              <p className="text-gray-500 dark:text-gray-400 text-sm">When porters self-register via the public form, their applications appear here.</p>
+            </div>
+          ) : (
+            <div className="grid gap-4">
+              {applications.map(app => (
+                <div key={app.id} className="card border border-gray-200 dark:border-gray-700">
+                  <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+                    <div className="flex-1 space-y-3">
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <span className="text-lg font-bold dark:text-white">{app.name}</span>
+                        {app.status === 'PENDING' && <span className="badge-pending">⏳ Pending Review</span>}
+                        {app.status === 'APPROVED' && <span className="badge-approved">✅ Approved</span>}
+                        {app.status === 'REJECTED' && <span className="badge-rejected">❌ Rejected</span>}
+                        <span className="badge-info">{app.provider_type}</span>
+                      </div>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-1 text-sm">
+                        <div>
+                          <span className="text-gray-400 dark:text-gray-500 text-xs block">Email</span>
+                          <span className="font-medium text-blue-600 dark:text-blue-400">{app.email}</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-400 dark:text-gray-500 text-xs block">Phone</span>
+                          <span className="font-medium dark:text-gray-300">{app.phone || '—'}</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-400 dark:text-gray-500 text-xs block">Station</span>
+                          <span className="font-medium dark:text-gray-300">{app.station}</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-400 dark:text-gray-500 text-xs block">Experience</span>
+                          <span className="font-medium dark:text-gray-300">{app.experience_years > 0 ? `${app.experience_years} yrs` : 'Fresher'}</span>
+                        </div>
+                        {app.aadhar_number && (
+                          <div>
+                            <span className="text-gray-400 dark:text-gray-500 text-xs block">Aadhaar</span>
+                            <span className="font-mono font-medium dark:text-gray-300">{'*'.repeat(8)}{app.aadhar_number.slice(-4)}</span>
+                          </div>
+                        )}
+                        <div>
+                          <span className="text-gray-400 dark:text-gray-500 text-xs block">Applied On</span>
+                          <span className="font-medium dark:text-gray-300">{new Date(app.applied_at).toLocaleDateString()}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {app.status === 'PENDING' && (
+                      <div className="flex gap-2 shrink-0">
+                        <button
+                          onClick={() => handleApplicationAction(app.id, 'approve')}
+                          disabled={!!appActionLoading[app.id]}
+                          className="btn-success text-sm px-4 py-2 disabled:opacity-50"
+                        >
+                          {appActionLoading[app.id] === 'approve' ? '...' : '✅ Approve'}
+                        </button>
+                        <button
+                          onClick={() => handleApplicationAction(app.id, 'reject')}
+                          disabled={!!appActionLoading[app.id]}
+                          className="btn-danger text-sm px-4 py-2 disabled:opacity-50"
+                        >
+                          {appActionLoading[app.id] === 'reject' ? '...' : '❌ Reject'}
+                        </button>
+                      </div>
+                    )}
+                    {(app.status === 'APPROVED' || app.status === 'REJECTED') && (
+                      <div className="text-xs text-gray-500 dark:text-gray-400 shrink-0">
+                        Reviewed: {app.reviewed_at ? new Date(app.reviewed_at).toLocaleString() : '—'}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* ── Settings ── */}
       {activeTab === 'settings' && (
+
         <div className="max-w-lg">
           <div className="card space-y-6">
             <div>

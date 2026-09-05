@@ -23,11 +23,25 @@ export async function POST(req) {
       return NextResponse.json({ error: 'Invalid email or password' }, { status: 401 });
     }
 
+    // Block PENDING / REJECTED provider applications
+    if (user.role === 'PROVIDER' && user.status === 'PENDING') {
+      return NextResponse.json({
+        error: 'Your application is under review. You will be notified once an admin approves your account.',
+        code: 'PENDING_APPROVAL',
+      }, { status: 403 });
+    }
+    if (user.role === 'PROVIDER' && user.status === 'REJECTED') {
+      return NextResponse.json({
+        error: 'Your application was rejected. Please contact the admin for more information.',
+        code: 'APPLICATION_REJECTED',
+      }, { status: 403 });
+    }
+
     const token = signToken({
       userId: user.id,
       name: user.name,
       email: user.email,
-      role: user.role || 'PASSENGER'
+      role: user.role || 'PASSENGER',
     });
 
     return NextResponse.json({
@@ -38,7 +52,7 @@ export async function POST(req) {
         name: user.name,
         email: user.email,
         phone: user.phone,
-        role: user.role || 'PASSENGER'
+        role: user.role || 'PASSENGER',
       },
     });
   } catch (err) {

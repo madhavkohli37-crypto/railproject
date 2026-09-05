@@ -6,12 +6,20 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 
+const NAV_LINKS = [
+  { href: '/', label: 'Home' },
+  { href: '/about', label: 'About' },
+  { href: '/book', label: 'Book Assistance', authOnly: true, roles: ['PASSENGER'] },
+  { href: '/dashboard', label: 'My Dashboard', authOnly: true },
+];
+
 export default function Navbar() {
   const { user, logout } = useAuth();
   const { isDark, toggleTheme } = useTheme();
   const router = useRouter();
   const pathname = usePathname();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
@@ -23,97 +31,183 @@ export default function Navbar() {
 
   const isActive = (path) => pathname === path;
 
-  return (
-    <nav className="bg-[#1a3a6b] dark:bg-[#0a192f] text-white shadow-lg sticky top-0 z-50 transition-colors duration-300">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
-          {/* Logo */}
-          <Link href="/" className="flex items-center space-x-2 group">
-            <span className="text-2xl">🚂</span>
-            <span className="text-xl font-bold">
-              Rail<span className="text-orange-400">Assist</span>
-            </span>
-          </Link>
+  const visibleLinks = NAV_LINKS.filter(link => {
+    if (link.authOnly && !user) return false;
+    if (link.roles && user && !link.roles.includes(user.role)) return false;
+    return true;
+  });
 
-          {/* Nav Links */}
-          <div className="flex items-center space-x-2">
-            <button 
-              onClick={toggleTheme}
-              className="p-2 mr-2 rounded-full hover:bg-white/10 transition-colors text-xl"
-              title="Toggle Dark Mode"
-            >
-              {isDark ? '☀️' : '🌙'}
-            </button>
-            
-            {user ? (
+  const roleBadge = {
+    ADMIN: { label: '🛡️ Admin', cls: 'bg-red-600 text-white' },
+    PROVIDER: { label: '👷 Employee', cls: 'bg-purple-600 text-white' },
+    PASSENGER: { label: '🧳 Passenger', cls: 'bg-blue-600 text-white' },
+  };
+
+  return (
+    <header className="sticky top-0 z-50 shadow-md">
+      {/* ── Top Info Bar ── */}
+      <div className="bg-[#003087] text-white text-xs">
+        <div className="max-w-7xl mx-auto px-4 flex items-center justify-between h-8">
+          <div className="flex items-center gap-4">
+            <span className="hidden sm:flex items-center gap-1">🚆 <span>Indian Railway Assistance Services</span></span>
+            <span className="flex items-center gap-1 text-orange-300">⭐ Verified &amp; Trusted Platform</span>
+          </div>
+          <div className="flex items-center gap-3">
+            {!user && (
               <>
+                <Link href="/porter-apply" className="text-orange-300 hover:text-orange-200 font-medium transition-colors">
+                  📋 Join as Porter
+                </Link>
+                <span className="text-white/30">|</span>
+              </>
+            )}
+            <button onClick={toggleTheme} className="flex items-center gap-1 hover:text-orange-300 transition-colors">
+              {isDark ? '☀️ Light' : '🌙 Dark'}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Main Navbar ── */}
+      <nav className="bg-[#1a3a6b] dark:bg-[#0a1929] text-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-14">
+
+            {/* Logo */}
+            <Link href="/" className="flex items-center gap-2.5 group shrink-0">
+              <div className="w-9 h-9 bg-[#E85D04] rounded-lg flex items-center justify-center text-xl font-extrabold shadow">
+                🚂
+              </div>
+              <div className="leading-tight">
+                <div className="text-base font-extrabold tracking-tight">
+                  Rail<span className="text-[#E85D04]">Assist</span>
+                </div>
+                <div className="text-[9px] text-blue-300 -mt-0.5 hidden sm:block">RAILWAY ASSISTANCE PLATFORM</div>
+              </div>
+            </Link>
+
+            {/* Desktop Nav Links */}
+            <div className="hidden md:flex items-center gap-1">
+              {visibleLinks.map(link => (
                 <Link
-                  href="/dashboard"
+                  key={link.href}
+                  href={link.href}
                   className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                    isActive('/dashboard')
+                    isActive(link.href)
                       ? 'bg-white/20 text-white'
-                      : 'text-gray-300 hover:text-white hover:bg-white/10'
+                      : 'text-blue-200 hover:text-white hover:bg-white/10'
                   }`}
                 >
-                  📊 Dashboard
+                  {link.label}
                 </Link>
-                {user.role === 'PASSENGER' && (
-                  <Link
-                    href="/book"
-                    className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                      isActive('/book')
-                        ? 'bg-white/20 text-white'
-                        : 'text-gray-300 hover:text-white hover:bg-white/10'
-                    }`}
-                  >
-                    🧳 Request Assistance
-                  </Link>
-                )}
+              ))}
+            </div>
 
-                <div className="flex items-center space-x-3 ml-4 border-l border-white/20 pl-4">
-                  <div className="flex items-center space-x-2">
-                    <div className="w-8 h-8 rounded-full bg-orange-500 flex items-center justify-center text-sm font-bold">
+            {/* Auth section */}
+            <div className="hidden md:flex items-center gap-3">
+              {user ? (
+                <>
+                  <div className="flex items-center gap-2 text-sm">
+                    <div className="w-8 h-8 rounded-full bg-[#E85D04] flex items-center justify-center font-bold text-sm shadow">
                       {user.name.charAt(0).toUpperCase()}
                     </div>
-                    <span className="text-gray-300 text-sm hidden sm:block">
-                      {user.name.split(' ')[0]}
-                    </span>
+                    <div className="leading-tight">
+                      <div className="text-white font-semibold text-sm">{user.name.split(' ')[0]}</div>
+                      <div className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${roleBadge[user.role]?.cls}`}>
+                        {roleBadge[user.role]?.label}
+                      </div>
+                    </div>
                   </div>
                   <button
                     onClick={handleLogout}
                     disabled={isLoggingOut}
-                    className="bg-orange-500 hover:bg-orange-600 disabled:bg-orange-400 px-4 py-1.5 rounded-lg text-sm font-semibold transition-colors flex items-center space-x-2 w-[100px] justify-center"
+                    className="bg-[#E85D04] hover:bg-[#d45200] disabled:opacity-60 text-white px-4 py-1.5 rounded-lg text-sm font-bold transition-colors flex items-center gap-2 min-w-[90px] justify-center"
                   >
                     {isLoggingOut ? (
-                      <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                      <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
                       </svg>
-                    ) : (
-                      <span>Logout</span>
-                    )}
+                    ) : 'Sign Out'}
                   </button>
-                </div>
-              </>
-            ) : (
-              <>
-                <Link
-                  href="/login"
-                  className="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors"
-                >
-                  Login
-                </Link>
-                <Link
-                  href="/signup"
-                  className="bg-orange-500 hover:bg-orange-600 px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
-                >
-                  Sign Up Free
-                </Link>
-              </>
-            )}
+                </>
+              ) : (
+                <>
+                  <Link href="/login" className="text-blue-200 hover:text-white px-3 py-1.5 rounded-md text-sm font-medium transition-colors">
+                    Login
+                  </Link>
+                  <Link href="/signup" className="bg-[#E85D04] hover:bg-[#d45200] text-white px-4 py-1.5 rounded-lg text-sm font-bold transition-colors">
+                    Sign Up Free
+                  </Link>
+                </>
+              )}
+            </div>
+
+            {/* Mobile menu toggle */}
+            <button
+              className="md:hidden p-2 rounded-md text-blue-200 hover:text-white hover:bg-white/10 transition-colors"
+              onClick={() => setMobileOpen(!mobileOpen)}
+              aria-label="Toggle menu"
+            >
+              {mobileOpen ? (
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              ) : (
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              )}
+            </button>
           </div>
         </div>
-      </div>
-    </nav>
+
+        {/* Mobile Menu */}
+        {mobileOpen && (
+          <div className="md:hidden border-t border-white/10 bg-[#0f2a55] dark:bg-[#050f1e] px-4 py-4 space-y-1 animate-fade-in">
+            {visibleLinks.map(link => (
+              <Link
+                key={link.href}
+                href={link.href}
+                onClick={() => setMobileOpen(false)}
+                className={`block px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                  isActive(link.href) ? 'bg-white/20 text-white' : 'text-blue-200 hover:text-white hover:bg-white/10'
+                }`}
+              >
+                {link.label}
+              </Link>
+            ))}
+            {!user && (
+              <Link href="/porter-apply" onClick={() => setMobileOpen(false)} className="block px-3 py-2.5 rounded-lg text-sm font-medium text-orange-300 hover:bg-white/10">
+                📋 Join as Porter
+              </Link>
+            )}
+            <div className="pt-2 border-t border-white/10 space-y-2">
+              {user ? (
+                <>
+                  <div className="flex items-center gap-2 px-3 py-2">
+                    <div className="w-8 h-8 rounded-full bg-[#E85D04] flex items-center justify-center font-bold">
+                      {user.name.charAt(0).toUpperCase()}
+                    </div>
+                    <span className="text-white font-semibold">{user.name}</span>
+                  </div>
+                  <button
+                    onClick={() => { handleLogout(); setMobileOpen(false); }}
+                    className="w-full text-left px-3 py-2.5 rounded-lg text-sm font-medium text-red-300 hover:bg-white/10"
+                  >
+                    Sign Out
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link href="/login" onClick={() => setMobileOpen(false)} className="block px-3 py-2.5 rounded-lg text-sm font-medium text-blue-200 hover:bg-white/10">Login</Link>
+                  <Link href="/signup" onClick={() => setMobileOpen(false)} className="block px-3 py-2.5 rounded-lg text-sm font-bold text-white bg-[#E85D04] hover:bg-[#d45200]">Sign Up Free</Link>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+      </nav>
+    </header>
   );
 }
