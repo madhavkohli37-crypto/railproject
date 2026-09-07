@@ -54,7 +54,7 @@ export default function LandingPage() {
         <div className="absolute inset-0 opacity-5" style={{backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 40px, rgba(255,255,255,.3) 40px, rgba(255,255,255,.3) 41px), repeating-linear-gradient(90deg, transparent, transparent 40px, rgba(255,255,255,.3) 40px, rgba(255,255,255,.3) 41px)'}} />
         <div className="relative max-w-7xl mx-auto text-center">
           <div className="inline-flex items-center gap-2 bg-white/10 border border-white/20 rounded-full px-4 py-1.5 text-sm font-medium text-blue-200 mb-6">
-            🚆 Official Railway Assistance Platform · Est. 2024
+            🚆 Official Railway Assistance Platform · Est. 2026
           </div>
           <h1 className="text-4xl md:text-6xl font-extrabold mb-6 leading-tight">
             Travel Stress-Free<br />
