@@ -10,13 +10,16 @@ export async function POST(req) {
 
   try {
     const body = await req.json();
-    const { station, train_number, platform, services, scheduled_at } = body;
+    const { station, train_number, platform, services, scheduled_at, priority_requested = false } = body;
 
     if (!station || !services || !services.length) {
       return NextResponse.json({ error: 'Station and services are required' }, { status: 400 });
     }
 
     const db = await getDB();
+    const passenger = await db.collection('users').findOne({ id: decoded.userId });
+    const goodHumanScore = passenger?.good_human_score ?? 100;
+    const priority_approved = Boolean(priority_requested) && goodHumanScore >= 70;
     const bookingId = await nextId('bookings');
 
     let total_price = 0;
@@ -46,6 +49,9 @@ export async function POST(req) {
       services: requestedServices,
       status: 'REQUESTED',
       total_price,
+      priority_requested: Boolean(priority_requested),
+      priority_approved,
+      good_human_score_at_booking: goodHumanScore,
       created_at: new Date().toISOString(),
     };
 

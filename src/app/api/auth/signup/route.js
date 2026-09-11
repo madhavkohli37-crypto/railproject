@@ -32,6 +32,7 @@ export async function POST(req) {
       password_hash,
       phone: phone || null,
       role: 'PASSENGER',
+      good_human_score: 100,
       created_at: new Date().toISOString(),
     };
 
@@ -41,7 +42,7 @@ export async function POST(req) {
     return NextResponse.json({
       message: 'Account created successfully!',
       token,
-      user: { id: user.id, name: user.name, email: user.email, phone: user.phone, role: user.role },
+      user: { id: user.id, name: user.name, email: user.email, phone: user.phone, role: user.role, good_human_score: 100, priority_eligible: true },
     }, { status: 201 });
   } catch (err) {
     console.error('Signup error:', err);

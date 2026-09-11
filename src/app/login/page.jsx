@@ -31,6 +31,14 @@ const ROLE_CONFIG = {
     hint: 'Restricted access. Authorized personnel only.',
     badge: 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300',
   },
+  MANAGER: {
+    label: 'Complaints Manager',
+    icon: '🧭',
+    color: 'from-[#0f766e] to-[#0d9488]',
+    darkColor: 'dark:from-[#134e4a] dark:to-[#115e59]',
+    hint: 'Review passenger reports and help keep railway spaces safe.',
+    badge: 'bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300',
+  },
 };
 
 export default function LoginPage() {
@@ -62,6 +70,7 @@ export default function LoginPage() {
         PASSENGER: ['PASSENGER'],
         PROVIDER: ['PROVIDER'],
         ADMIN: ['ADMIN'],
+        MANAGER: ['MANAGER'],
       };
       if (!roleMap[selectedRole].includes(user.role)) {
         setError(`This account is not registered as a ${config.label}. Please select the correct role.`);
@@ -94,7 +103,7 @@ export default function LoginPage() {
             {/* Role Selector */}
             <div>
               <p className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">I am a...</p>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {Object.entries(ROLE_CONFIG).map(([role, cfg]) => (
                   <button
                     key={role}

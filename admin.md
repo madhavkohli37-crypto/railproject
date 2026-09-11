@@ -26,6 +26,16 @@
 | Type     | PORTER                       |
 | Role     | `PROVIDER` — Sees assigned jobs, updates status, toggles availability. |
 
+## 🧭 Complaints Manager Account
+
+This is the default complaint manager account created automatically when the database is initialized.
+
+| Field    | Value |
+|----------|-------|
+| Email    | `manager@railassist.com` |
+| Password | `0000` |
+| Role     | `MANAGER` — Reviews passenger activity complaints and can uphold, dismiss, or request more information. |
+
 ---
 
 ## 🔑 How to Change Admin Credentials
@@ -43,3 +53,4 @@
 - New employees are created exclusively through the **Master Portal → Employees** tab.
 - Passengers register through the public `/signup` page and are assigned the `PASSENGER` role automatically.
 - The `/signup` page is **restricted** to passenger accounts only. Admin and Employee accounts cannot be self-created.
+- Passengers start with a Good Human Score of 100. Reviewers can apply fines and score penalties only after reviewing a complaint.

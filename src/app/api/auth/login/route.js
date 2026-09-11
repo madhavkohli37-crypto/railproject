@@ -53,6 +53,8 @@ export async function POST(req) {
         email: user.email,
         phone: user.phone,
         role: user.role || 'PASSENGER',
+        good_human_score: user.good_human_score ?? 100,
+        priority_eligible: (user.good_human_score ?? 100) >= 70,
       },
     });
   } catch (err) {

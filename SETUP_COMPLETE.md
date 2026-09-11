@@ -1,97 +1,101 @@
-# RailAssist Setup Complete ✅
+# RailAssist Setup Guide
 
-## What I've Done
+RailAssist is configured as a single Next.js application with MongoDB persistence. There is no separate Express backend or Vite frontend.
 
-### 1. **Migrated Database from lowdb to MongoDB**
-   - Replaced lowdb JSON file storage with MongoDB (mongodb://localhost:27017/railassist)
-   - Updated backend dependencies: removed `lowdb`, added `mongodb`
-   - Created MongoDB-aware database module (`db.js`) with:
-     - Connection pooling
-     - Automatic collection creation
-     - Auto-seeding of 16 coolies across major stations
-     - Async/await support for all database operations
+## Current Architecture
 
-### 2. **Updated All Backend Routes for MongoDB**
-   - **auth.js**: Updated signup, login, and /me routes to use MongoDB
-   - **coolie.js**: Updated all endpoints (stations, coolies, bookings, cancellations)
-   - All database calls now use MongoDB native driver with proper error handling
+- **Next.js App Router** serves both the UI and API route handlers.
+- **React 19** powers client components and dashboards.
+- **Tailwind CSS 3** provides styling, responsive layouts, and dark mode.
+- **MongoDB** stores users, bookings, providers, sequences, and audit logs.
+- **JWT and bcryptjs** provide authentication and password hashing.
+- **Complaint review** supports passenger evidence reports, manager decisions, admin oversight, fines, and Good Human Score adjustments.
 
-### 3. **Created Root Package.json for Easy Server Start**
-   - Single `npm start` command starts both backend and frontend simultaneously
-   - Uses `concurrently` to run both servers
-   - Additional scripts available:
-     - `npm run dev`: Runs backend and frontend in dev mode with hot reload
-     - `npm run start:backend`: Backend only
-     - `npm run start:frontend`: Frontend only
-     - `npm run build`: Builds frontend for production
+## Installation
 
-### 4. **Updated Server Configuration**
-   - Backend server (`server.js`) now initializes MongoDB connection before listening
-   - Graceful shutdown handling for MongoDB cleanup
-   - Environment variables configured in `.env`:
-     - `PORT=5000` (backend)
-     - `JWT_SECRET=railassist_super_secret_jwt_key_2024`
-     - `MONGODB_URI=mongodb://localhost:27017/railassist`
-
-## Current Status
-
-✅ **Backend**: Running on http://localhost:5000
-✅ **Frontend**: Running on http://localhost:5174
-✅ **Database**: MongoDB connected and seeded
-
-## How to Start the Application
+From the repository root:
 
 ```bash
-# From the project root directory
-npm start
+npm install
 ```
 
-This will start:
-- Backend API on port 5000
-- Frontend React dev server on port 5174 (or next available port)
+The available package scripts are:
 
-## Frontend-Backend Integration
+```bash
+npm run dev       # Start the Next.js development server
+npm run build     # Create a production build
+npm start         # Start the production server
+```
 
-The frontend is already configured to proxy API calls to the backend:
-- All `/api/*` requests are forwarded to `http://localhost:5000`
-- This is configured in `frontend/vite.config.js`
-- CORS is enabled on the backend for `localhost:5173` and `localhost:3000`
+## Environment Variables
 
-## Database Collections
+Create `.env.local` in the repository root:
 
-MongoDB will automatically create these collections in the `railassist` database:
+```env
+MONGODB_URI=mongodb://localhost:27017/railassist
+JWT_SECRET=replace-with-a-long-random-secret
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
+```
 
-- **users**: Stores user accounts (id, email, password_hash, phone, created_at)
-- **coolies**: Railway porters (id, name, station, badge_number, phone, rating, price_per_bag, experience_years, available)
-- **bookings**: User bookings (id, user_id, coolie_id, station, train_number, bags_count, status, total_price, created_at)
-- **sequences**: Auto-increment sequences for IDs
+For MongoDB Atlas, replace `MONGODB_URI` with the cluster connection string. Use a strong, unique production value for `JWT_SECRET`.
 
-## API Endpoints
+## Database Initialization
 
-### Authentication
-- `POST /api/auth/signup` - Create new account
-- `POST /api/auth/login` - Login user
-- `GET /api/auth/me` [protected] - Get current user info
+`src/lib/db.js` maintains a cached MongoDB client and initializes the database on the first connection. It:
 
-### Coolies
-- `GET /api/stations` - List all stations
-- `GET /api/coolies?station=Mumbai%20CST` - List available coolies (optional station filter)
-- `GET /api/coolies/:id` - Get specific coolie details
+- Creates the `users`, `coolies`, `bookings`, and `sequences` collections when needed.
+- Seeds the default administrator and employee accounts.
+- Seeds 16 porter records across the supported stations when the porter collection is empty.
+- Seeds a complaints manager account for the review portal.
+- Provides numeric IDs through the `sequences` collection.
 
-### Bookings
-- `POST /api/bookings` [protected] - Create booking
-- `GET /api/bookings/my` [protected] - Get user's bookings
-- `PATCH /api/bookings/:id/cancel` [protected] - Cancel booking
+The application also writes booking and provider-application activity to `audit_logs`.
 
-## Requirements
+## Running Locally
 
-- Node.js 18+ installed
-- MongoDB running on localhost:27017
-- npm installed
+1. Ensure MongoDB is running locally, or configure a reachable MongoDB Atlas database.
+2. Install dependencies with `npm install`.
+3. Start the app with `npm run dev`.
+4. Open `http://localhost:3000`.
 
-## Notes
+The UI and API are served by the same Next.js process. API requests use the `/api` path and do not require a Vite proxy or a second server.
 
-- The frontend proxy is configured to work with both Vite dev server (port 5173/5174) and production builds
-- JWT tokens are valid for 7 days
-- All passwords are hashed with bcryptjs (10 salt rounds)
-- The application includes 16 pre-seeded railway porters across major Indian stations
+## Main Routes
+
+### Pages
+
+- `/` — landing page
+- `/about` — platform information
+- `/signup` — passenger registration
+- `/login` — passenger, provider, and admin login
+- `/book` — passenger service request form
+- `/dashboard` — role-specific dashboard
+- `/porter-apply` — provider application form
+- `/report` — passenger uncivilised-activity report form
+
+### API
+
+- `/api/auth/*` — signup, login, and session verification
+- `/api/stations` — station lookup
+- `/api/bookings/*` — create, list, and cancel bookings
+- `/api/provider/*` — applications, availability, dashboard, and job updates
+- `/api/admin/*` — administration, employees, applications, and settings
+- `/api/complaints` — submit and review incident complaints; passengers can also retrieve their own complaint logs
+
+## Good Human Score and Priority Booking
+
+Passengers start with a Good Human Score of 100. Managers and administrators can uphold complaints against an identified passenger, apply a fine, and reduce the score. A score of 70 or higher makes a passenger eligible to request priority booking; the booking stores both the request and approval decision. This score is not reduced automatically merely because a report is submitted.
+
+Passenger reports may include up to five image files smaller than 1.5 MB each. The application stores their data with the complaint, so production deployments should use suitable MongoDB storage limits and a dedicated object-storage service if evidence volume grows.
+
+## Deployment
+
+For Vercel:
+
+1. Import the repository as a Next.js project.
+2. Configure `MONGODB_URI`, `JWT_SECRET`, and optionally `NEXT_PUBLIC_SITE_URL`.
+3. Deploy using the default Next.js build settings.
+
+MongoDB must allow connections from the deployment environment. Keep environment variables out of source control and rotate any development credentials before production use.
+
+See `README.md` for the complete API table and `techstack.md` for the detailed architecture reference.

@@ -11,6 +11,7 @@ const NAV_LINKS = [
   { href: '/about', label: 'About' },
   { href: '/book', label: 'Book Assistance', authOnly: true, roles: ['PASSENGER'] },
   { href: '/dashboard', label: 'My Dashboard', authOnly: true },
+  { href: '/report', label: 'Report Activity', authOnly: true, roles: ['PASSENGER'] },
 ];
 
 export default function Navbar() {
@@ -41,6 +42,7 @@ export default function Navbar() {
     ADMIN: { label: '🛡️ Admin', cls: 'bg-red-600 text-white' },
     PROVIDER: { label: '👷 Employee', cls: 'bg-purple-600 text-white' },
     PASSENGER: { label: '🧳 Passenger', cls: 'bg-blue-600 text-white' },
+    MANAGER: { label: '🧭 Manager', cls: 'bg-teal-600 text-white' },
   };
 
   return (

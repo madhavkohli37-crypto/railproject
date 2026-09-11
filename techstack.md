@@ -1,65 +1,101 @@
-# RailAssist — Tech Stack Documentation
+# RailAssist — Tech Stack
 
-This document outlines the complete technology stack, libraries, architecture, and deployment setup used in the RailAssist web application.
+This document describes the current architecture, libraries, persistence model, and deployment configuration for RailAssist.
 
----
+## 1. Core Framework and Architecture
 
-## 1. Core Framework & Architecture
+RailAssist is a full-stack **Next.js App Router** application.
 
-The application has been unified into a single, high-performance **full-stack Next.js** application using the **App Router**.
+- **Framework:** Next.js 16+
+- **Language:** JavaScript
+- **UI:** React 19 client and server components
+- **Backend:** Native Next.js Route Handlers under `src/app/api/`
+- **Styling:** Tailwind CSS 3 with class-based dark mode
+- **Client state:** React Context and Hooks
+- **Browser API client:** Axios
 
-* **Framework:** **Next.js 16+** (JavaScript / React 19)
-* **Architecture:** Full-Stack Serverless Web Application
-  * **Frontend:** Next.js Client Components (`'use client'`) with React Hooks (`useState`, `useEffect`, `useContext`).
-  * **Backend:** Native Next.js **Route Handlers** (`src/app/api/...`) running as serverless functions.
-* **Styling & Design System:**
-  * **Tailwind CSS 3**: Responsive utility-first styling.
-  * **Dark Mode**: Integrated class-based dark mode (`darkMode: 'class'`) with persistent state in `localStorage` and `ThemeContext`.
-  * **Custom Keyframes & Animations**: Fade-in, slide-up, and realistic loading spinners.
+The frontend and backend are served by the same Next.js process. There is no separate Express server or Vite application.
 
----
+## 2. Application Surfaces
 
-## 2. API & Backend Route Handlers
+### Passenger
 
-All backend routes are implemented as native Next.js Route Handlers in `src/app/api/`:
-* **Authentication:**
-  * `POST /api/auth/signup` — Passenger registration with secure bcrypt password hashing.
-  * `POST /api/auth/login` — Unified login for Passengers, Providers, and Admins with JWT issuance.
-  * `GET /api/auth/me` — Protected session verification.
-* **Stations & Assistance:**
-  * `GET /api/stations` — Station lookups.
-  * `POST /api/bookings` — Booking requests with automatic provider assignment and audit logging.
-  * `GET /api/bookings/my` — Passenger booking history.
-  * `PATCH /api/bookings/[id]/cancel` — Booking cancellation with provider release.
-* **Provider (Employee Portal):**
-  * `GET /api/provider/dashboard` — Assigned jobs and earnings.
-  * `PATCH /api/provider/availability` — Toggle online/busy status.
-  * `PATCH /api/provider/job/[id]/status` — Check-in, check-out, accept, and complete jobs.
-* **Admin (Master Portal):**
-  * `GET /api/admin/dashboard` — Full system overview, statistics, audit logs, and bookings.
-  * `POST /api/admin/employees` — Creation of employee accounts.
-  * `DELETE /api/admin/employees/[id]` — Removal of employees.
+- Passenger signup and login
+- Station and service selection
+- Porter, wheelchair, and meet-and-greet booking
+- Booking history and cancellation
 
----
+### Provider
 
-## 3. Database & Persistence
+- Public provider application
+- Approval-gated employee login
+- Availability toggle
+- Assigned job dashboard
+- Accept, reject, start, and complete job actions
 
-* **Database:** **MongoDB Atlas** (Cloud Cluster) / MongoDB Community.
-* **Driver:** Official MongoDB Node.js Driver (`mongodb`).
-* **Serverless Connection Pooling:**
-  * Global client caching in `src/lib/db.js` (`global._mongoClient`, `global._mongoDb`) ensures database connections are reused across serverless function invocations without exhausting connection limits on Vercel.
-* **Auto-Seeding:**
-  * Automatically provisions the default system administrator (`admin@railassist.com` / `0000`), a default employee (`employee1@railassist.com` / `0000`), and stations on first run.
+### Admin
 
----
+- System statistics and booking overview
+- Passenger and provider records
+- Employee creation and removal
+- Provider application approval and rejection
+- Audit log access
+- Admin credential settings
 
-## 4. Deployment on Vercel (1-Step Process)
+## 3. API Route Handlers
 
-Because the app is built with Next.js, deployment to Vercel is seamless:
+All handlers are located in `src/app/api/`.
 
-1. Push this repository to GitHub.
-2. In [Vercel](https://vercel.com), click **Add New Project** and import the repository.
-3. In **Environment Variables**, add:
-   * `MONGODB_URI` = `mongodb+srv://wildcat123_:17ggs%4011@cluster0.3iicg8h.mongodb.net/railassist`
-   * `JWT_SECRET` = `railassist_super_secret_jwt_key_2024`
-4. Click **Deploy**. Both the frontend and backend will be live on your `.vercel.app` domain with zero extra configuration.
+- **Authentication:** `/api/auth/signup`, `/api/auth/login`, `/api/auth/me`
+- **Stations:** `/api/stations`
+- **Bookings:** `/api/bookings`, `/api/bookings/my`, `/api/bookings/[id]/cancel`
+- **Providers:** `/api/provider/apply`, `/api/provider/dashboard`, `/api/provider/availability`, `/api/provider/job/[id]/status`
+- **Administration:** `/api/admin/dashboard`, `/api/admin/employees`, `/api/admin/employees/[id]`, `/api/admin/applications`, `/api/admin/applications/[id]`, `/api/admin/settings`
+
+Protected handlers read JWTs from the `Authorization: Bearer <token>` request header and authorize requests by role.
+
+## 4. Database and Persistence
+
+- **Database:** MongoDB Atlas or MongoDB Community
+- **Driver:** Official MongoDB Node.js driver
+- **Database name:** `railassist`
+- **Connection module:** `src/lib/db.js`
+- **Authentication:** `bcryptjs` password hashing and `jsonwebtoken` tokens
+
+The database module caches the MongoDB client and database handle for reuse across serverless invocations. On first connection it creates the required collections and seeds:
+
+- The default administrator
+- The default employee
+- 16 porter records across supported stations
+- Numeric ID sequences
+
+The main collections are:
+
+- `users` — passengers, providers, and administrators
+- `bookings` — booking requests and service assignment data
+- `coolies` — porter records
+- `sequences` — numeric ID counters
+- `audit_logs` — booking, application, and administrative activity
+
+## 5. Environment Variables
+
+Configure these values in `.env.local` for local development or in the deployment provider:
+
+```env
+MONGODB_URI=mongodb://localhost:27017/railassist
+JWT_SECRET=replace-with-a-long-random-secret
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
+```
+
+Use a strong, unique `JWT_SECRET` and a production MongoDB connection string when deploying. Never commit actual credentials or connection strings.
+
+## 6. Deployment on Vercel
+
+Because the project is a standard Next.js application:
+
+1. Import the repository into Vercel.
+2. Configure `MONGODB_URI`, `JWT_SECRET`, and `NEXT_PUBLIC_SITE_URL`.
+3. Use the default Next.js build settings.
+4. Deploy.
+
+MongoDB must allow connections from the Vercel deployment environment. The default build command is `next build`, and the production server is started with `next start`.
