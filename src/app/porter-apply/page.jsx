@@ -23,6 +23,8 @@ export default function PorterApplyPage() {
     experience_years: '', aadhar_number: '',
     agree: false,
   });
+  const [aadharImage, setAadharImage] = useState('');
+  const [previewUrl, setPreviewUrl] = useState('');
   const [step, setStep] = useState(1); // 1 = form, 2 = success
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -31,6 +33,29 @@ export default function PorterApplyPage() {
     const { name, value, type, checked } = e.target;
     setForm(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
     setError('');
+  };
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setError('Please select a valid image file (JPG, PNG, WEBP).');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Aadhaar image size must be under 5MB.');
+      return;
+    }
+
+    setError('');
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setAadharImage(reader.result);
+      setPreviewUrl(reader.result);
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleSubmit = async (e) => {
@@ -57,8 +82,10 @@ export default function PorterApplyPage() {
         station: form.station,
         experience_years: form.experience_years,
         aadhar_number: form.aadhar_number,
+        aadhar_image: aadharImage,
       });
       setStep(2);
+
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to submit application. Please try again.');
     } finally {
@@ -144,11 +171,34 @@ export default function PorterApplyPage() {
                     <input type="email" name="email" required value={form.email} onChange={handleChange} placeholder="you@example.com" className="input-field" />
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Aadhaar Number</label>
-                    <input type="text" name="aadhar_number" value={form.aadhar_number} onChange={handleChange} placeholder="12-digit Aadhaar" maxLength={12} className="input-field" />
+                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Aadhaar Number <span className="text-red-400">*</span></label>
+                    <input type="text" name="aadhar_number" required value={form.aadhar_number} onChange={handleChange} placeholder="12-digit Aadhaar" maxLength={12} className="input-field" />
                   </div>
                 </div>
+
+                {/* Aadhaar Image Upload */}
+                <div className="mt-4">
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+                    Upload Aadhaar Card Image / Photo <span className="text-red-400">*</span>
+                  </label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    required
+                    onChange={handleFileChange}
+                    className="w-full text-sm text-gray-500 dark:text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-[#003087] file:text-white hover:file:bg-[#002270] cursor-pointer"
+                  />
+                  <p className="text-[11px] text-gray-400 mt-1">Upload clear photo/scan of Aadhaar Card (JPG, PNG, WEBP up to 5MB).</p>
+
+                  {previewUrl && (
+                    <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-gray-200 dark:border-gray-600">
+                      <p className="text-xs font-semibold text-gray-500 dark:text-gray-300 mb-2">📷 Aadhaar Image Preview:</p>
+                      <img src={previewUrl} alt="Aadhaar Preview" className="max-h-40 rounded-lg shadow-sm object-contain border border-gray-200 dark:border-gray-600" />
+                    </div>
+                  )}
+                </div>
               </div>
+
 
               {/* Work Info */}
               <div>

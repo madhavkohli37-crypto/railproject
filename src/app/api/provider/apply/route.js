@@ -9,7 +9,7 @@ export async function POST(req) {
     const {
       name, email, password, phone,
       provider_type, station,
-      experience_years, aadhar_number
+      experience_years, aadhar_number, aadhar_image
     } = body;
 
     if (!name || !email || !password || !phone || !provider_type || !station) {
@@ -40,7 +40,10 @@ export async function POST(req) {
       station,
       experience_years: experience_years ? parseInt(experience_years) : 0,
       aadhar_number: aadhar_number ? aadhar_number.trim() : null,
+      aadhar_image: aadhar_image || null,
+      verification_status: 'PENDING',
       available: false,           // Not available until approved
+
       rating: 5.0,
       completed_jobs: 0,
       earnings: 0,

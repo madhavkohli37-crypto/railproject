@@ -1113,7 +1113,19 @@ function AdminView({ currentUser }) {
                           <span className="font-medium dark:text-gray-300">{new Date(app.applied_at).toLocaleDateString()}</span>
                         </div>
                       </div>
+
+                      {app.aadhar_image && (
+                        <div className="pt-1">
+                          <button
+                            onClick={() => setSelectedUserModal(app)}
+                            className="text-xs bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-300 font-semibold px-3 py-1.5 rounded-lg border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100 inline-flex items-center gap-1"
+                          >
+                            🖼️ View Uploaded Aadhaar Card
+                          </button>
+                        </div>
+                      )}
                     </div>
+
 
                     {app.status === 'PENDING' && (
                       <div className="flex gap-2 shrink-0">
