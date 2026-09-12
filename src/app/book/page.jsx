@@ -126,7 +126,7 @@ export default function BookingPage() {
 
               <label className="flex items-start gap-3 p-4 border border-green-200 dark:border-green-900/50 bg-green-50 dark:bg-green-900/20 rounded-xl cursor-pointer">
                 <input type="checkbox" name="priority_requested" checked={form.priority_requested} onChange={handleChange} className="mt-1 w-5 h-5" />
-                <div><div className="font-semibold text-green-800 dark:text-green-300">⭐ Request priority booking</div><div className="text-sm text-green-700 dark:text-green-400">Available to passengers with a Good Human Score of 70 or above. Benefits may include priority handling, discounts, and occasional complimentary services.</div></div>
+                <div><div className="font-semibold text-green-800 dark:text-green-300">⭐ Request priority booking</div><div className="text-sm text-green-700 dark:text-green-400">Available to passengers with a Good Human Score of 700 or above. Benefits may include priority handling, discounts, and occasional complimentary services.</div></div>
               </label>
               <div>
                 <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Date & Time</label>

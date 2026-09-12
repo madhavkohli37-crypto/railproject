@@ -13,10 +13,13 @@ import BookingCard from '@/components/BookingCard';
 function PassengerView({ user }) {
   const [bookings, setBookings] = useState([]);
   const [complaints, setComplaints] = useState([]);
+  const [notifications, setNotifications] = useState([]);
   const [complaintsLoading, setComplaintsLoading] = useState(true);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [cancelMsg, setCancelMsg] = useState('');
+  const [appealReasons, setAppealReasons] = useState({});
+  const [appealLoading, setAppealLoading] = useState({});
 
   const fetchBookings = async () => {
     try {
@@ -38,6 +41,10 @@ function PassengerView({ user }) {
       .finally(() => setComplaintsLoading(false));
   }, []);
 
+  useEffect(() => {
+    api.get('/notifications').then(res => setNotifications(res.data)).catch(() => {});
+  }, []);
+
   const handleCancel = async (bookingId) => {
     if (!window.confirm('Are you sure you want to cancel this booking?')) return;
     try {
@@ -47,6 +54,18 @@ function PassengerView({ user }) {
       setTimeout(() => setCancelMsg(''), 4000);
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to cancel booking');
+    }
+  };
+
+  const submitAppeal = async (complaint) => {
+    setAppealLoading(prev => ({ ...prev, [complaint.id]: true }));
+    try {
+      await api.post(`/complaints/${complaint.id}/appeal`, { reason: appealReasons[complaint.id] || '' });
+      setComplaints(items => items.map(item => item.id === complaint.id ? { ...item, appeal: { status: 'PENDING' } } : item));
+    } catch (err) {
+      setError(err.response?.data?.error || 'Unable to submit appeal');
+    } finally {
+      setAppealLoading(prev => ({ ...prev, [complaint.id]: false }));
     }
   };
 
@@ -91,11 +110,26 @@ function PassengerView({ user }) {
       <div className="card">
         <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">👤 My Profile</h2>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
+          <div><p className="text-gray-500 dark:text-gray-400 mb-1">User ID</p><p className="font-semibold dark:text-white">{user?.user_id || `U-${user?.id}`}</p></div>
           <div><p className="text-gray-500 dark:text-gray-400 mb-1">Full Name</p><p className="font-semibold dark:text-white">{user?.name}</p></div>
           <div><p className="text-gray-500 dark:text-gray-400 mb-1">Email</p><p className="font-semibold dark:text-white">{user?.email}</p></div>
           <div><p className="text-gray-500 dark:text-gray-400 mb-1">Phone</p><p className="font-semibold dark:text-white">{user?.phone || '—'}</p></div>
-          <div><p className="text-gray-500 dark:text-gray-400 mb-1">Good Human Score</p><p className="font-semibold text-green-600 dark:text-green-400">{user?.good_human_score ?? 100}/100</p></div>
+          <div><p className="text-gray-500 dark:text-gray-400 mb-1">Good Human Score</p><p className="font-semibold text-green-600 dark:text-green-400">{user?.good_human_score ?? 400}/1000</p></div>
         </div>
+      </div>
+
+      <div>
+        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-5">🔔 Account Notifications</h2>
+        {notifications.length === 0 ? (
+          <div className="card text-sm text-gray-500 dark:text-gray-400">No account-impact notifications yet.</div>
+        ) : (
+          <div className="space-y-3">{notifications.map(notification => (
+            <div key={notification.id} className="card border-l-4 border-blue-500">
+              <div className="flex justify-between gap-3"><h3 className="font-bold dark:text-white">{notification.title}</h3><span className="text-xs text-gray-500">{new Date(notification.created_at).toLocaleString('en-IN')}</span></div>
+              <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">{notification.message}</p>
+            </div>
+          ))}</div>
+        )}
       </div>
 
       <div>
@@ -124,10 +158,28 @@ function PassengerView({ user }) {
                   <span className="badge-info">{complaint.status.replace(/_/g, ' ')}</span>
                 </div>
                 <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{complaint.description}</p>
+                <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-3 text-xs text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3">
+                  <div><span className="block text-gray-400">Occurred</span>{complaint.occurred_at ? new Date(complaint.occurred_at).toLocaleString('en-IN') : '—'}</div>
+                  <div><span className="block text-gray-400">Train</span>{complaint.train_number || '—'}</div>
+                  <div><span className="block text-gray-400">Platform / coach</span>{complaint.platform || '—'}</div>
+                  <div><span className="block text-gray-400">Location</span>{complaint.station}</div>
+                </div>
+                {complaint.images?.length > 0 && <div className="flex gap-2 flex-wrap mt-3">{complaint.images.map((image, index) => <a key={index} href={image.data} target="_blank" rel="noreferrer"><img src={image.data} alt={`Complaint evidence ${index + 1}`} className="w-16 h-16 object-cover rounded border" /></a>)}</div>}
                 {complaint.resolution && (
                   <div className="mt-3 rounded-lg bg-gray-50 dark:bg-gray-700/50 p-3 text-sm text-gray-600 dark:text-gray-300">
-                    <strong>Review outcome:</strong> {complaint.resolution.action.replace(/_/g, ' ')}
-                    {complaint.resolution.notes ? ` — ${complaint.resolution.notes}` : ''}
+                    <strong>{complaint.resolution.accused_user_id === user?.id ? 'Decision against your account:' : 'Review outcome:'}</strong> {complaint.resolution.action.replace(/_/g, ' ')}
+                    {complaint.resolution.accused_user_id === user?.id && <div className="mt-1">Fine: ₹{complaint.resolution.fine_amount || 0} · Good Human Score penalty: {complaint.resolution.score_penalty || 0}</div>}
+                    {complaint.resolution.notes && <div className="mt-1"><strong>Manager explanation:</strong> {complaint.resolution.notes}</div>}
+                    {complaint.resolution.accused_user_id === user?.id && complaint.resolution.accused_message && <div className="mt-1"><strong>Message from complaint manager:</strong> {complaint.resolution.accused_message}</div>}
+                    {complaint.reporter_id === user?.id && complaint.resolution.reporter_message && <div className="mt-1"><strong>Message from complaint manager:</strong> {complaint.resolution.reporter_message}</div>}
+                    {complaint.appeal && <div className="mt-1"><strong>Appeal:</strong> {complaint.appeal.status}{complaint.appeal.review_notes ? ` — ${complaint.appeal.review_notes}` : ''}</div>}
+                  </div>
+                )}
+                {complaint.resolution?.accused_user_id === user?.id && complaint.status === 'UPHELD' && complaint.appeal?.status !== 'PENDING' && (
+                  <div className="mt-3 border-t pt-3">
+                    <p className="text-sm font-semibold dark:text-white mb-2">Object to this decision</p>
+                    <textarea className="input-field w-full" rows="2" minLength="10" placeholder="Explain why you believe this decision should be reviewed (at least 10 characters)." value={appealReasons[complaint.id] || ''} onChange={e => setAppealReasons(prev => ({ ...prev, [complaint.id]: e.target.value }))} />
+                    <button disabled={appealLoading[complaint.id]} onClick={() => submitAppeal(complaint)} className="btn-outline mt-2">{appealLoading[complaint.id] ? 'Submitting...' : 'Submit appeal for re-review'}</button>
                   </div>
                 )}
               </div>
@@ -309,9 +361,11 @@ function ComplaintsView() {
       await api.patch(`/complaints/${complaint.id}`, {
         action: form.action || 'UPHOLD',
         accused_user_id: form.accused_user_id,
-        fine_amount: form.fine_amount || 0,
-        score_penalty: form.score_penalty || 0,
+        fine_amount: form.fine_amount || undefined,
+        score_penalty: form.score_penalty || undefined,
         notes: form.notes,
+        reporter_message: form.reporter_message,
+        accused_message: form.accused_message,
       });
       await fetchComplaints();
     } catch (err) {
@@ -331,18 +385,21 @@ function ComplaintsView() {
       </div>
       {loading ? <div className="card animate-pulse h-40" /> : complaints.length === 0 ? <div className="card text-center py-12 text-gray-500">No complaints have been registered.</div> : complaints.map(complaint => {
         const form = forms[complaint.id] || {};
-        const open = ['OPEN', 'INFO_REQUESTED'].includes(complaint.status);
+        const open = ['OPEN', 'INFO_REQUESTED'].includes(complaint.status) || complaint.appeal?.status === 'PENDING';
         return <div key={complaint.id} className="card space-y-4">
-          <div className="flex flex-wrap justify-between gap-3"><div><h2 className="font-bold text-lg dark:text-white">#{complaint.id} · {complaint.category}</h2><p className="text-sm text-gray-500">{complaint.station}{complaint.train_number ? ` · Train ${complaint.train_number}` : ''} · Reported by {complaint.reporter_name} (U-{complaint.reporter_id})</p></div><span className="badge-info">{complaint.status}</span></div>
+          <div className="flex flex-wrap justify-between gap-3"><div><h2 className="font-bold text-lg dark:text-white">#{complaint.id} · {complaint.category}</h2><p className="text-sm text-gray-500">{complaint.station}{complaint.train_number ? ` · Train ${complaint.train_number}` : ''} · Reported by User ID: U-{complaint.reporter_id}</p></div><span className="badge-info">{complaint.status}</span></div>
           <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{complaint.description}</p>
+          {complaint.appeal?.status === 'PENDING' && <div className="rounded-lg bg-orange-50 dark:bg-orange-900/20 p-3 text-sm text-orange-800 dark:text-orange-200"><strong>Passenger appeal:</strong> {complaint.appeal.reason}</div>}
           {complaint.images?.length > 0 && <div className="flex gap-3 flex-wrap">{complaint.images.map((image, index) => <a key={index} href={image.data} target="_blank" rel="noreferrer"><img src={image.data} alt={`Complaint evidence ${index + 1}`} className="w-24 h-24 object-cover rounded-lg border dark:border-gray-600" /></a>)}</div>}
           {open && <div className="grid grid-cols-2 md:grid-cols-5 gap-3 border-t pt-4 dark:border-gray-700">
             <input className="input-field" placeholder="Accused user ID" value={form.accused_user_id || ''} onChange={e => setForm(complaint.id, 'accused_user_id', e.target.value)} />
-            <input className="input-field" type="number" min="0" max="100" placeholder="Score penalty" value={form.score_penalty || ''} onChange={e => setForm(complaint.id, 'score_penalty', e.target.value)} />
-            <input className="input-field" type="number" min="0" placeholder="Fine (₹)" value={form.fine_amount || ''} onChange={e => setForm(complaint.id, 'fine_amount', e.target.value)} />
-            <select className="input-field" value={form.action || 'UPHOLD'} onChange={e => setForm(complaint.id, 'action', e.target.value)}><option value="UPHOLD">Uphold</option><option value="DISMISS">Dismiss</option><option value="REQUEST_INFO">Request info</option></select>
+            <input className="input-field" type="number" min="0" max="1000" placeholder="Penalty (default by category)" value={form.score_penalty || ''} onChange={e => setForm(complaint.id, 'score_penalty', e.target.value)} />
+            <input className="input-field" type="number" min="0" placeholder="Fine (default by category)" value={form.fine_amount || ''} onChange={e => setForm(complaint.id, 'fine_amount', e.target.value)} />
+            <select className="input-field" value={form.action || 'UPHOLD'} onChange={e => setForm(complaint.id, 'action', e.target.value)}><option value="UPHOLD">✅ Uphold — genuine</option><option value="DISMISS">❌ Reject — insufficient evidence</option><option value="REJECT_SPAM">🚫 Reject — spam/false</option><option value="REQUEST_INFO">📝 Request more info</option>{complaint.appeal?.status === 'PENDING' && <><option value="ACCEPT_APPEAL">✅ Accept appeal — reverse penalty</option><option value="DENY_APPEAL">❌ Deny appeal — keep decision</option></>}</select>
             <button disabled={actionLoading[complaint.id]} onClick={() => review(complaint)} className="btn-primary">{actionLoading[complaint.id] ? 'Saving...' : 'Save Review'}</button>
-            <textarea className="input-field col-span-2 md:col-span-5" rows="2" placeholder="Review notes" value={form.notes || ''} onChange={e => setForm(complaint.id, 'notes', e.target.value)} />
+            <textarea className="input-field col-span-2 md:col-span-5" rows="2" placeholder={complaint.appeal?.status === 'PENDING' ? 'Internal review explanation (required for appeal decisions)' : 'Internal review notes'} value={form.notes || ''} onChange={e => setForm(complaint.id, 'notes', e.target.value)} />
+            <textarea className="input-field col-span-2 md:col-span-5" rows="2" placeholder="Message for the person who submitted the complaint (optional)" value={form.reporter_message || ''} onChange={e => setForm(complaint.id, 'reporter_message', e.target.value)} />
+            <textarea className="input-field col-span-2 md:col-span-5" rows="2" placeholder="Message for the accused passenger (optional)" value={form.accused_message || ''} onChange={e => setForm(complaint.id, 'accused_message', e.target.value)} />
           </div>}
           {!open && complaint.resolution && <p className="text-sm text-gray-500">Resolution: {complaint.resolution.action}; fine ₹{complaint.resolution.fine_amount}; score penalty {complaint.resolution.score_penalty}. {complaint.resolution.notes || ''}</p>}
         </div>;

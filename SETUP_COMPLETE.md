@@ -84,7 +84,11 @@ The UI and API are served by the same Next.js process. API requests use the `/ap
 
 ## Good Human Score and Priority Booking
 
-Passengers start with a Good Human Score of 100. Managers and administrators can uphold complaints against an identified passenger, apply a fine, and reduce the score. A score of 70 or higher makes a passenger eligible to request priority booking; the booking stores both the request and approval decision. This score is not reduced automatically merely because a report is submitted.
+Passengers start with a Good Human Score of 400 on a 0–1000 scale. Managers and administrators can uphold genuine complaints against an identified passenger, apply a category-based fine and score penalty, reject complaints as spam (reducing the reporter by 25), dismiss complaints for insufficient evidence, or request more information. A score of 700 or higher makes a passenger eligible to request priority booking; genuine reports reward the reporter with +5. The booking stores both the request and approval decision.
+
+Every account receives a unique display user ID such as `U-42`. Complaint queues show the reporter's user ID instead of their name, and the complaint API strips stored legacy reporter names from responses.
+
+Every reviewed complaint creates an account notification for the affected reporter and accused passenger. Notifications include the decision, fine, score change, resulting score, and any separate manager message intended for that person. Accused passengers can view the complete incident details, evidence, manager explanation, and penalty, then submit an appeal. Managers can accept or deny pending appeals and must provide review notes for the decision.
 
 Passenger reports may include up to five image files smaller than 1.5 MB each. The application stores their data with the complaint, so production deployments should use suitable MongoDB storage limits and a dedicated object-storage service if evidence volume grows.
 

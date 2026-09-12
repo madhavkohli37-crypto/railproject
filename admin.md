@@ -53,4 +53,6 @@ This is the default complaint manager account created automatically when the dat
 - New employees are created exclusively through the **Master Portal → Employees** tab.
 - Passengers register through the public `/signup` page and are assigned the `PASSENGER` role automatically.
 - The `/signup` page is **restricted** to passenger accounts only. Admin and Employee accounts cannot be self-created.
-- Passengers start with a Good Human Score of 100. Reviewers can apply fines and score penalties only after reviewing a complaint.
+- Passengers start with a Good Human Score of 400 on a 0–1000 scale. Reviewers can apply fines and score penalties only after reviewing a complaint.
+- An accused passenger can view the complete complaint evidence, the decision, penalty, and manager explanation in their dashboard. They may submit one appeal for re-review. Managers must write an explanation when accepting or denying an appeal; accepting reverses the fine and restores the deducted score.
+- During every review, the manager can optionally write a separate message for the reporting passenger and a separate message for the accused passenger. Each message is delivered privately through that passenger's notification and complaint log.

@@ -1,6 +1,8 @@
 import { MongoClient } from 'mongodb';
 import bcrypt from 'bcryptjs';
 
+export const DEFAULT_GOOD_HUMAN_SCORE = 400;
+
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/railassist';
 const DB_NAME = 'railassist';
 
@@ -45,17 +47,22 @@ async function initializeCollections(db) {
     if (!collectionNames.includes('coolies')) await db.createCollection('coolies');
     if (!collectionNames.includes('bookings')) await db.createCollection('bookings');
     if (!collectionNames.includes('complaints')) await db.createCollection('complaints');
+    if (!collectionNames.includes('notifications')) await db.createCollection('notifications');
     if (!collectionNames.includes('sequences')) {
       await db.createCollection('sequences');
       await db.collection('sequences').insertMany([
         { _id: 'userId', seq: 1 },
         { _id: 'coolieId', seq: 1 },
         { _id: 'bookingId', seq: 1 },
-        { _id: 'complaintId', seq: 1 }
+        { _id: 'complaintId', seq: 1 },
+        { _id: 'notificationId', seq: 1 }
       ]);
     }
     if (!await db.collection('sequences').findOne({ _id: 'complaintId' })) {
       await db.collection('sequences').insertOne({ _id: 'complaintId', seq: 1 });
+    }
+    if (!await db.collection('sequences').findOne({ _id: 'notificationId' })) {
+      await db.collection('sequences').insertOne({ _id: 'notificationId', seq: 1 });
     }
 
     // Seed default admin
@@ -67,7 +74,7 @@ async function initializeCollections(db) {
         email: 'admin@railassist.com',
         password_hash: await bcrypt.hash('0000', 10),
         role: 'ADMIN',
-        good_human_score: 100,
+        good_human_score: DEFAULT_GOOD_HUMAN_SCORE,
         created_at: new Date().toISOString()
       });
       console.log('✅ Seeded default admin (admin@railassist.com / 0000)');
@@ -82,7 +89,7 @@ async function initializeCollections(db) {
         email: 'employee1@railassist.com',
         password_hash: await bcrypt.hash('0000', 10),
         role: 'PROVIDER',
-        good_human_score: 100,
+        good_human_score: DEFAULT_GOOD_HUMAN_SCORE,
         provider_type: 'PORTER',
         station: 'New Delhi',
         available: true,
@@ -103,7 +110,7 @@ async function initializeCollections(db) {
         email: 'manager@railassist.com',
         password_hash: await bcrypt.hash('0000', 10),
         role: 'MANAGER',
-        good_human_score: 100,
+        good_human_score: DEFAULT_GOOD_HUMAN_SCORE,
         created_at: new Date().toISOString()
       });
       console.log('✅ Seeded complaints manager (manager@railassist.com / 0000)');
@@ -153,7 +160,9 @@ export async function nextId(table, dbInstance = null) {
     'users': 'userId',
     'coolies': 'coolieId',
     'bookings': 'bookingId',
-    'complaints': 'complaintId'
+    'complaints': 'complaintId',
+    'complaintAppeals': 'complaintAppealId',
+    'notifications': 'notificationId'
   };
 
   const result = await db.collection('sequences').findOneAndUpdate(

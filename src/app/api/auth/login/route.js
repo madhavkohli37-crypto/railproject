@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
-import { getDB } from '@/lib/db';
+import { getDB, DEFAULT_GOOD_HUMAN_SCORE } from '@/lib/db';
 import { signToken } from '@/lib/auth';
 
 export async function POST(req) {
@@ -49,12 +49,13 @@ export async function POST(req) {
       token,
       user: {
         id: user.id,
+        user_id: `U-${user.id}`,
         name: user.name,
         email: user.email,
         phone: user.phone,
         role: user.role || 'PASSENGER',
-        good_human_score: user.good_human_score ?? 100,
-        priority_eligible: (user.good_human_score ?? 100) >= 70,
+        good_human_score: user.good_human_score ?? DEFAULT_GOOD_HUMAN_SCORE,
+        priority_eligible: (user.good_human_score ?? DEFAULT_GOOD_HUMAN_SCORE) >= 700,
       },
     });
   } catch (err) {

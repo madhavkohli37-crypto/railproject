@@ -94,7 +94,8 @@ All API routes are implemented in `src/app/api/`.
 | PATCH | `/api/admin/settings` | Admin | Update admin credentials |
 | POST | `/api/complaints` | Passenger | Register an uncivilised-activity complaint with optional images |
 | GET | `/api/complaints` | Passenger/Manager/Admin | Passengers see their own complaint logs; reviewers see all complaints |
-| PATCH | `/api/complaints/:id` | Manager/Admin | Uphold, dismiss, or request information |
+| PATCH | `/api/complaints/:id` | Manager/Admin | Uphold, dismiss, request information, or decide an appeal |
+| POST | `/api/complaints/:id/appeal` | Accused passenger | Object to an upheld decision and request re-review |
 
 ## Project Structure
 
@@ -142,9 +143,15 @@ Passengers can use `/report` or **Report Activity** from their dashboard to repo
 
 Passengers can view the status and review outcome of their own reports in the **My Complaint Logs** section of their dashboard. The API scopes passenger requests to the authenticated reporter; managers and administrators retain access to the full review queue.
 
-Every passenger starts with a **Good Human Score of 100**. A manager or administrator can review evidence and either dismiss a complaint, request more information, or uphold it against an identified passenger. An upheld complaint may add a fine and reduce the accused passenger's score. Scores never fall below zero.
+Every passenger starts with a **Good Human Score of 400**. A manager or administrator can review evidence and either dismiss a complaint, request more information, or uphold it against an identified passenger. An upheld complaint may add a fine and reduce the accused passenger's score. Scores never fall below zero.
 
-Passengers with a score of **70 or above** may request priority booking benefits. Lower scores do not receive priority eligibility; the booking record stores whether priority was requested and whether it was approved. The exact operational benefits, such as priority handling, discounts, or occasional complimentary food, remain subject to railway and RailAssist policy.
+Each account receives a unique numeric database ID and a display user ID such as `U-42` at signup/login. Complaint review uses this user ID; reporter names are not shown in the manager complaint queue, so people with identical names remain distinguishable without exposing their names.
+
+The Good Human Score uses a **0–1000 scale**. New passengers start at 400. Scores of **700 or above** may request priority booking benefits, discounts, and occasional complimentary food; lower scores do not receive priority eligibility. The booking record stores whether priority was requested and whether it was approved.
+
+When a complaint is reviewed, the manager can uphold it as genuine, dismiss it for insufficient evidence, reject it as spam/false, or request more information. A genuine upheld complaint rewards the reporter with **+5** points and applies a category-based penalty to the identified passenger. By default, spitting/littering reduces 50 points and adds a ₹500 fine; smoking/substance use reduces 75 points and adds ₹1,000; harassment reduces 100 points and adds ₹1,500; obstruction reduces 30 points and adds ₹300. Managers can adjust penalties. Spam/false complaints reduce the reporter's score by 25 points.
+
+Account-impact notifications are created for every reviewed complaint, including fines, score changes, new scores, dismissals, information requests, and appeal outcomes. Passengers can view these notifications in their dashboard. Managers can also write separate messages to the person who submitted the complaint and the accused passenger; each recipient sees only their own message. An accused passenger can see the full incident details, evidence, penalty, and manager explanation in their complaint logs, then submit an appeal with an objection. Managers can accept an appeal to reverse the fine and score penalty or deny it with a written explanation.
 
 The manager portal is available through `/dashboard` after signing in with the `MANAGER` role. Administrators have a **Complaints** tab in the master portal and can perform the same review actions. Reports should describe observable facts, and passengers should never confront or identify people at personal risk.
 

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getDB, nextId } from '@/lib/db';
+import { getDB, nextId, DEFAULT_GOOD_HUMAN_SCORE } from '@/lib/db';
 import { verifyToken } from '@/lib/auth';
 
 export async function POST(req) {
@@ -18,8 +18,8 @@ export async function POST(req) {
 
     const db = await getDB();
     const passenger = await db.collection('users').findOne({ id: decoded.userId });
-    const goodHumanScore = passenger?.good_human_score ?? 100;
-    const priority_approved = Boolean(priority_requested) && goodHumanScore >= 70;
+    const goodHumanScore = passenger?.good_human_score ?? DEFAULT_GOOD_HUMAN_SCORE;
+    const priority_approved = Boolean(priority_requested) && goodHumanScore >= 700;
     const bookingId = await nextId('bookings');
 
     let total_price = 0;

@@ -13,9 +13,12 @@ export async function GET(req) {
 
   try {
     const db = await getDB();
-    const query = decoded.role === 'PASSENGER' ? { reporter_id: decoded.userId } : {};
+    const query = decoded.role === 'PASSENGER'
+      ? { $or: [{ reporter_id: decoded.userId }, { 'resolution.accused_user_id': decoded.userId }] }
+      : {};
     const complaints = await db.collection('complaints').find(query).sort({ created_at: -1 }).toArray();
-    return NextResponse.json(complaints);
+    const safeComplaints = complaints.map(({ reporter_name, ...complaint }) => complaint);
+    return NextResponse.json(safeComplaints);
   } catch (err) {
     console.error('Complaint list error:', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
@@ -41,12 +44,10 @@ export async function POST(req) {
     }
 
     const db = await getDB();
-    const passenger = await db.collection('users').findOne({ id: decoded.userId });
     const now = new Date().toISOString();
     const complaint = {
       id: await nextId('complaints'),
       reporter_id: decoded.userId,
-      reporter_name: passenger?.name || decoded.name,
       category,
       description: description.trim(),
       station,
