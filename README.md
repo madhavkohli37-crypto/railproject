@@ -1,28 +1,310 @@
 # RailAssist
 
-RailAssist is a full-stack Indian Railway assistance platform for booking verified porters, wheelchair assistance, and meet-and-greet services.
+RailAssist is a full-stack Indian Railway assistance and passenger civic-management platform built with **Next.js, React, MongoDB, and JWT authentication**.
 
-The application is implemented as a single **Next.js App Router** project. The frontend pages and backend API route handlers live in the same repository.
+Passengers can book verified railway assistance services such as porter, wheelchair, and meet-and-greet support. The platform also provides a civic reporting system for disruptive or uncivilised activity on trains and railway platforms. Authorized complaint managers and administrators review reports, evidence, penalties, account impacts, manager messages, and appeals.
+
+This project is an application-level prototype. Real railway deployment must follow applicable railway rules, privacy requirements, legal requirements, and due-process procedures.
 
 ## Features
 
-- Passenger signup and login with JWT authentication
-- Porter, wheelchair, and meet-and-greet booking requests
-- Automatic provider assignment by service type, station, and availability
-- Passenger dashboard with booking history and cancellation
-- Provider dashboard for availability and job status updates
-- Admin portal for bookings, users, employees, applications, settings, and audit logs
-- MongoDB persistence with automatic collection setup and seed accounts
-- Responsive Tailwind CSS interface with persistent light/dark mode
-- Passenger incident reporting with image evidence and complaint tracking
-- Manager and admin complaint review with fines and Good Human Score penalties
-- Score-based priority booking eligibility and passenger benefits
+### Passenger features
 
-## Tech Stack
+- Signup and login with JWT authentication
+- Unique display user ID, for example `U-42`
+- Porter, wheelchair, and meet-and-greet booking
+- Automatic provider assignment by service type, station, and availability
+- Booking history and cancellation
+- Provider/job status tracking
+- Passenger profile and Good Human Score display
+- Priority booking eligibility
+- Passenger benefits based on Good Human Score
+- Civic activity reporting from `/report`
+- Image evidence upload
+- Complaint status and complaint logs
+- Private account and complaint notifications
+- Complete accused-passenger case details when a complaint is upheld against the account
+- Appeal and re-review request for an upheld decision
+
+### Provider features
+
+- Provider login
+- Assigned-job dashboard
+- Availability toggle
+- Job status updates
+
+### Complaint manager features
+
+- Dedicated `MANAGER` role and portal
+- Complaint queue with evidence and incident details
+- Reporter identification by unique user ID instead of reporter name
+- Accused passenger identification by user ID
+- Category-based default fine and score penalty
+- Custom fine and score penalty overrides
+- Uphold, dismiss, reject as spam/false, or request more information
+- Written review explanation
+- Separate private message for the reporter
+- Separate private message for the accused passenger
+- Appeal review and written appeal decision
+
+### Administrator features
+
+- Master admin portal
+- User, employee, provider, booking, application, and settings management
+- Full complaint queue access
+- Complaint review and appeal decisions
+- Audit log access
+- Complaint and account oversight
+
+## Passenger Civic Reporting System
+
+Passengers can use **Report Activity** from the dashboard or open `/report` directly. Reports may cover:
+
+- Spitting or littering
+- Smoking or substance use
+- Harassment or abusive behaviour
+- Blocking seats, aisles, or platforms
+- Other uncivilised or disruptive activity
+
+A report contains a category, description, station, optional train number, optional platform or coach, incident date/time, and up to five image files. The browser and API validate image type and size. Passengers should report observable facts, avoid confrontation, and contact railway or emergency authorities directly when there is an immediate safety threat.
+
+Each report receives a complaint ID. The reporter can see their complaint history. If a complaint is upheld against an identified passenger, that accused passenger can also see the complete case details, including the description, location, train/platform details, evidence images, decision, fine, score penalty, and manager explanation.
+
+## Complaint lifecycle
+
+```text
+Passenger observes activity
+          ↓
+Passenger submits report and evidence
+          ↓
+Complaint enters manager/admin review queue
+          ↓
+Reviewer checks facts and evidence
+          ↓
+ ┌───────────────────────┐
+ │ Request more info     │
+ │ Dismiss                │
+ │ Reject as spam/false  │
+ │ Uphold as genuine     │
+ └───────────────────────┘
+          ↓
+If upheld: identify accused passenger
+          ↓
+Apply fine and/or score penalty
+          ↓
+Notify affected passengers
+          ↓
+Accused passenger may submit an appeal
+          ↓
+Manager/admin accepts or denies appeal
+```
+
+A report does not automatically punish anyone. Only an authorized manager or administrator can apply a fine or Good Human Score penalty.
+
+## Complaint review decisions
+
+| Action | Meaning |
+| --- | --- |
+| `UPHOLD` | Evidence supports the complaint. An identified passenger receives the configured fine and score penalty. |
+| `DISMISS` | The complaint cannot be established or has insufficient evidence. |
+| `REJECT_SPAM` | The complaint is found to be false or abusive. The reporter receives the configured spam-report score penalty. |
+| `REQUEST_INFO` | The reviewer needs additional information before resolving the complaint. |
+| `ACCEPT_APPEAL` | The appeal is accepted. The original fine is reversed and the deducted score is restored. |
+| `DENY_APPEAL` | The appeal is denied and the original decision remains active. |
+
+When reviewing a complaint, the manager can write:
+
+1. Internal review notes explaining the decision.
+2. A private message for the person who submitted the complaint.
+3. A private message for the accused passenger.
+
+Each passenger receives only the message intended for that passenger through their notifications and complaint log.
+
+## Appeals and re-review
+
+An accused passenger can appeal an upheld complaint from **My Complaint Logs**. The passenger must provide an objection of at least 10 characters. Only one pending appeal can exist at a time.
+
+The complaint manager or administrator can review a pending appeal. A written explanation is required when accepting or denying it.
+
+- **Accepted appeal:** the fine is reversed, the deducted Good Human Score points are restored, and both account impacts are notified.
+- **Denied appeal:** the original decision remains active and the accused passenger receives the appeal explanation.
+
+## Good Human Score
+
+Every newly created passenger account starts with:
+
+```text
+Good Human Score = 400 / 1000
+```
+
+Scores are clamped between `0` and `1000`. An upheld complaint can reduce the accused passenger's score. A genuine upheld complaint rewards the reporter with `+5`. A complaint rejected as spam or false reduces the reporter's score by `25`.
+
+### Default category penalties
+
+| Category | Default fine | Default score penalty |
+| --- | ---: | ---: |
+| Spitting or littering | ₹500 | 50 |
+| Smoking or substance use | ₹1,000 | 75 |
+| Harassment or abusive behaviour | ₹1,500 | 100 |
+| Blocking seats, aisles, or platforms | ₹300 | 30 |
+| Other uncivilised activity | ₹500 | 50 |
+
+Managers can override the default fine and score penalty during review. Scores never fall below zero or above 1000.
+
+## Priority booking and benefits
+
+Passengers with a Good Human Score of **700 or above** are eligible to request priority booking. Eligibility does not guarantee capacity or availability; the normal booking and operational checks still apply.
+
+Potential high-score benefits include:
+
+- Priority booking
+- Discounts
+- Occasional complimentary food
+- Faster service handling
+- Other administrator-configured benefits
+
+The current application enforces the `700+` priority threshold. Benefits beyond priority eligibility are policy concepts and should be configured before production use.
+
+## Notifications
+
+Notifications are created for relevant complaint outcomes and account impacts, including:
+
+- Fine applied
+- Good Human Score reduction or reward
+- New resulting score
+- Complaint dismissal
+- Request for more information
+- Spam/false complaint outcome
+- Appeal submission
+- Appeal acceptance or denial
+- Private manager messages
+
+Passengers can view notifications in the dashboard. Notifications are scoped to the authenticated passenger.
+
+## User identity and privacy
+
+Every account has a numeric database ID and a display ID formatted as `U-<id>`, such as `U-42`.
+
+- Signup and login responses include the display user ID.
+- Complaint records use `reporter_id`.
+- The manager queue displays the reporter's user ID instead of their name.
+- Passenger complaint access is limited to complaints submitted by that passenger or upheld complaints where that passenger is the accused user.
+- Legacy `reporter_name` values are removed from complaint API responses.
+
+Complaint evidence and passenger information should only be available to authorized users. Passengers should not confront, threaten, or publicly identify an accused person.
+
+## Default accounts
+
+Development administrator, employee, and complaint-manager credentials are documented in [`admin.md`](./admin.md). The default complaint manager account is:
+
+```text
+Email: manager@railassist.com
+Password: 0000
+Role: MANAGER
+```
+
+Change development credentials before any shared or production deployment. Do not commit production credentials.
+
+## API reference
+
+All API routes are implemented in `src/app/api/`.
+
+| Method | Endpoint | Auth | Description |
+| --- | --- | --- | --- |
+| `POST` | `/api/auth/signup` | No | Register a passenger |
+| `POST` | `/api/auth/login` | No | Authenticate a passenger, provider, manager, or admin |
+| `GET` | `/api/auth/me` | Authenticated | Return the current user |
+| `GET` | `/api/stations` | No | List stations |
+| `POST` | `/api/bookings` | Authenticated | Create a service booking |
+| `GET` | `/api/bookings/my` | Passenger | List the passenger's bookings |
+| `PATCH` | `/api/bookings/:id/cancel` | Passenger | Cancel an eligible booking |
+| `POST` | `/api/provider/apply` | No | Submit a provider application |
+| `GET` | `/api/provider/dashboard` | Provider | List assigned jobs |
+| `PATCH` | `/api/provider/availability` | Provider | Update provider availability |
+| `PATCH` | `/api/provider/job/:id/status` | Provider | Update an assigned job |
+| `GET` | `/api/admin/dashboard` | Admin | Load admin statistics and records |
+| `POST` | `/api/admin/employees` | Admin | Create an employee |
+| `DELETE` | `/api/admin/employees/:id` | Admin | Remove an employee |
+| `GET` | `/api/admin/applications` | Admin | List provider applications |
+| `PATCH` | `/api/admin/applications/:id` | Admin | Approve or reject an application |
+| `PATCH` | `/api/admin/settings` | Admin | Update admin credentials |
+| `POST` | `/api/complaints` | Passenger | Submit a complaint with optional images |
+| `GET` | `/api/complaints` | Passenger/Manager/Admin | List complaints scoped by role |
+| `PATCH` | `/api/complaints/:id` | Manager/Admin | Resolve a complaint or decide an appeal |
+| `POST` | `/api/complaints/:id/appeal` | Accused passenger | Submit an appeal for re-review |
+| `GET` | `/api/notifications` | Authenticated | List private notifications |
+
+The complaint review endpoint accepts `reporter_message` and `accused_message` fields for private recipient-specific messages.
+
+## Project structure
+
+```text
+railassist/
+├── src/
+│   ├── app/
+│   │   ├── api/
+│   │   │   ├── auth/
+│   │   │   ├── bookings/
+│   │   │   ├── complaints/
+│   │   │   │   └── [id]/appeal/
+│   │   │   ├── notifications/
+│   │   │   ├── provider/
+│   │   │   └── admin/
+│   │   ├── dashboard/
+│   │   ├── report/
+│   │   ├── book/
+│   │   ├── login/
+│   │   ├── signup/
+│   │   ├── porter-apply/
+│   │   ├── about/
+│   │   ├── globals.css
+│   │   ├── layout.jsx
+│   │   └── page.jsx
+│   ├── components/
+│   ├── context/
+│   └── lib/
+│       ├── auth.js
+│       ├── axiosInstance.js
+│       └── db.js
+├── admin.md
+├── next.config.js
+├── package.json
+├── tailwind.config.js
+└── techstack.md
+```
+
+## Database collections
+
+The default MongoDB database is `railassist`. The application uses:
+
+- `users` — passenger, provider, manager, and administrator accounts
+- `bookings` — booking requests, assignments, statuses, and priority decisions
+- `coolies` — seeded porter/provider records
+- `sequences` — numeric ID counters
+- `audit_logs` — administrative, booking, complaint, and appeal activity
+- `complaints` — reports, evidence, resolutions, private manager messages, and appeals
+- `notifications` — private account-impact and manager-message notifications
+
+Passwords are stored as bcrypt hashes. `.env.local` and production credentials must never be committed.
+
+## Authentication and authorization
+
+Supported roles are:
+
+```text
+PASSENGER
+PROVIDER
+MANAGER
+ADMIN
+```
+
+Protected API routes verify the JWT and role before performing sensitive operations. Passengers can access only their own bookings, notifications, and relevant complaint records. Managers and administrators can review complaints. Administrators have master-portal access.
+
+## Tech stack
 
 | Layer | Technology |
 | --- | --- |
-| Framework | Next.js 16+ App Router |
+| Framework | Next.js 16 App Router |
 | UI | React 19 |
 | Styling | Tailwind CSS 3 |
 | Database | MongoDB |
@@ -34,17 +316,11 @@ The application is implemented as a single **Next.js App Router** project. The f
 
 - Node.js 18 or newer
 - npm
-- MongoDB Community or MongoDB Atlas
+- MongoDB Community Edition or MongoDB Atlas
 
-## Getting Started
+## Environment variables
 
-Install dependencies from the repository root:
-
-```bash
-npm install
-```
-
-Create a local `.env.local` file:
+Create `.env.local` in the repository root:
 
 ```env
 MONGODB_URI=mongodb://localhost:27017/railassist
@@ -52,7 +328,17 @@ JWT_SECRET=replace-with-a-long-random-secret
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
 ```
 
-Start the development server:
+For MongoDB Atlas, replace `MONGODB_URI` with the Atlas connection string.
+
+## Getting started
+
+Install dependencies:
+
+```bash
+npm install
+```
+
+Start development:
 
 ```bash
 npm run dev
@@ -60,99 +346,40 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
-Create a production build and run it with:
+Build and start production:
 
 ```bash
 npm run build
 npm start
 ```
 
-The first database connection creates the required collections and seeds the default administrator, employee, and porter records. See `admin.md` for the current development credentials and account-management instructions.
+The first database connection creates the required collections and seeds the configured development accounts. See [`admin.md`](./admin.md) for credential and account-management details.
 
-## API Reference
+## Security and operational considerations
 
-All API routes are implemented in `src/app/api/`.
+The prototype includes JWT authentication, bcrypt password hashing, role checks, image validation, upload limits, and audit logging. A production deployment should additionally add:
 
-| Method | Endpoint | Auth | Description |
-| --- | --- | --- | --- |
-| POST | `/api/auth/signup` | No | Register a passenger |
-| POST | `/api/auth/login` | No | Authenticate a passenger, provider, or admin |
-| GET | `/api/auth/me` | Bearer token | Return the current user |
-| GET | `/api/stations` | No | List stations with available providers |
-| POST | `/api/bookings` | Bearer token | Create a service booking |
-| GET | `/api/bookings/my` | Bearer token | List the passenger's bookings |
-| PATCH | `/api/bookings/:id/cancel` | Bearer token | Cancel a passenger booking |
-| POST | `/api/provider/apply` | No | Submit a provider application |
-| GET | `/api/provider/dashboard` | Provider | List assigned jobs |
-| PATCH | `/api/provider/availability` | Provider | Update provider availability |
-| PATCH | `/api/provider/job/:id/status` | Provider | Update an assigned job |
-| GET | `/api/admin/dashboard` | Admin | Load admin statistics and records |
-| POST | `/api/admin/employees` | Admin | Create an employee |
-| DELETE | `/api/admin/employees/:id` | Admin | Remove an employee |
-| GET | `/api/admin/applications` | Admin | List provider applications |
-| PATCH | `/api/admin/applications/:id` | Admin | Approve or reject an application |
-| PATCH | `/api/admin/settings` | Admin | Update admin credentials |
-| POST | `/api/complaints` | Passenger | Register an uncivilised-activity complaint with optional images |
-| GET | `/api/complaints` | Passenger/Manager/Admin | Passengers see their own complaint logs; reviewers see all complaints |
-| PATCH | `/api/complaints/:id` | Manager/Admin | Uphold, dismiss, request information, or decide an appeal |
-| POST | `/api/complaints/:id/appeal` | Accused passenger | Object to an upheld decision and request re-review |
+- Complaint rate limiting
+- Duplicate complaint detection
+- Stronger image/object-storage handling
+- Fine payment and fine-status tracking
+- Configurable policy administration
+- Score-change history collection
+- Email/SMS or push delivery
+- Railway staff verification
+- Abuse and fraud detection
+- Legal and privacy review
 
-## Project Structure
+Never commit:
 
 ```text
-railassist/
-├── src/
-│   ├── app/
-│   │   ├── api/                 # Next.js API route handlers
-│   │   ├── about/               # About page
-│   │   ├── book/                # Passenger booking page
-│   │   ├── dashboard/           # Passenger, provider, and admin dashboards
-│   │   ├── login/               # Login page
-│   │   ├── porter-apply/        # Provider application page
-│   │   ├── signup/              # Passenger signup page
-│   │   ├── globals.css          # Tailwind layers and shared components
-│   │   ├── layout.jsx           # Root layout, providers, navbar, and footer
-│   │   └── page.jsx             # Landing page
-│   ├── components/              # Shared React components
-│   ├── context/                 # Auth and theme providers
-│   └── lib/
-│       ├── auth.js              # JWT signing and verification
-│       ├── axiosInstance.js     # Browser API client and auth interceptor
-│       └── db.js                # MongoDB connection, setup, and seed data
-├── admin.md                     # Development admin and employee credentials
-├── next.config.js
-├── package.json
-├── tailwind.config.js
-└── techstack.md
+.env.local
 ```
 
-## Database
+## Disclaimer
 
-The MongoDB database is named `railassist`. The application uses these collections:
+RailAssist's Good Human Score, fines, priority booking, discounts, complimentary food, and other benefits are configurable application concepts. In a production railway deployment, passenger identification, penalties, fines, priority allocation, and benefits must operate under applicable railway rules, legal requirements, privacy regulations, and due-process procedures.
 
-- `users` — passengers, providers, and administrators
-- `bookings` — booking requests and service assignment data
-- `coolies` — seeded porter records
-- `sequences` — numeric ID counters
-- `audit_logs` — administrative and booking activity
-- `complaints` — passenger reports, image evidence, and review resolutions
+## License
 
-## Civic Reporting and Good Human Score
-
-Passengers can use `/report` or **Report Activity** from their dashboard to report spitting, littering, smoking, harassment, obstruction, or another uncivilised activity on a train or platform. A report includes the station, optional train/platform details, a description, and up to five image files. Images are validated in the browser and stored with the complaint record as evidence.
-
-Passengers can view the status and review outcome of their own reports in the **My Complaint Logs** section of their dashboard. The API scopes passenger requests to the authenticated reporter; managers and administrators retain access to the full review queue.
-
-Every passenger starts with a **Good Human Score of 400**. A manager or administrator can review evidence and either dismiss a complaint, request more information, or uphold it against an identified passenger. An upheld complaint may add a fine and reduce the accused passenger's score. Scores never fall below zero.
-
-Each account receives a unique numeric database ID and a display user ID such as `U-42` at signup/login. Complaint review uses this user ID; reporter names are not shown in the manager complaint queue, so people with identical names remain distinguishable without exposing their names.
-
-The Good Human Score uses a **0–1000 scale**. New passengers start at 400. Scores of **700 or above** may request priority booking benefits, discounts, and occasional complimentary food; lower scores do not receive priority eligibility. The booking record stores whether priority was requested and whether it was approved.
-
-When a complaint is reviewed, the manager can uphold it as genuine, dismiss it for insufficient evidence, reject it as spam/false, or request more information. A genuine upheld complaint rewards the reporter with **+5** points and applies a category-based penalty to the identified passenger. By default, spitting/littering reduces 50 points and adds a ₹500 fine; smoking/substance use reduces 75 points and adds ₹1,000; harassment reduces 100 points and adds ₹1,500; obstruction reduces 30 points and adds ₹300. Managers can adjust penalties. Spam/false complaints reduce the reporter's score by 25 points.
-
-Account-impact notifications are created for every reviewed complaint, including fines, score changes, new scores, dismissals, information requests, and appeal outcomes. Passengers can view these notifications in their dashboard. Managers can also write separate messages to the person who submitted the complaint and the accused passenger; each recipient sees only their own message. An accused passenger can see the full incident details, evidence, penalty, and manager explanation in their complaint logs, then submit an appeal with an objection. Managers can accept an appeal to reverse the fine and score penalty or deny it with a written explanation.
-
-The manager portal is available through `/dashboard` after signing in with the `MANAGER` role. Administrators have a **Complaints** tab in the master portal and can perform the same review actions. Reports should describe observable facts, and passengers should never confront or identify people at personal risk.
-
-Set `MONGODB_URI` to an Atlas connection string when deploying. Do not commit `.env.local` or production credentials.
+This project is intended for educational, demonstration, and prototype purposes unless otherwise specified by the project owner.
