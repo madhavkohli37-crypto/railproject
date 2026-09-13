@@ -6,6 +6,27 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import api from '@/lib/axiosInstance';
 import BookingCard from '@/components/BookingCard';
+import RewardCoinIcon from '@/components/RewardCoinIcon';
+
+function RewardsSummary() {
+  const [state, setState] = useState(null);
+  useEffect(() => { api.get('/rewards/state').then(res => setState(res.data)).catch(() => {}); }, []);
+  const score = state?.score ?? 400;
+  const band = state?.band;
+  const styles = { LOW: 'text-red-600', SAFE: 'text-yellow-600', GOOD: 'text-green-600', EXCELLENT: 'text-emerald-700' };
+  return (
+    <div className="card border-l-4 border-orange-500">
+      <div className="flex flex-wrap justify-between items-center gap-4">
+        <div><h2 className="text-lg font-bold text-gray-900 dark:text-white">🌱 Good Human Score</h2><p className="text-sm text-gray-500 dark:text-gray-400">Reputation score (0–1000), separate from spendable RailCoins.</p></div>
+        <Link href="/rewards" className="btn-outline text-sm px-4 py-2">Open rewards store</Link>
+      </div>
+      <div className="mt-4 grid grid-cols-2 gap-4">
+        <div><p className={`text-2xl font-extrabold ${styles[band?.key] || 'text-green-600'}`}>{score}/1000</p><p className="text-xs text-gray-500">{band?.label || 'Safe'} · safe from 200</p></div>
+        <div><p className="flex items-center gap-1 text-2xl font-extrabold text-orange-500"><RewardCoinIcon className="h-6 w-6" />{state?.coins ?? 0}</p><p className="text-xs text-gray-500">RailCoins balance</p></div>
+      </div>
+    </div>
+  );
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 1. PASSENGER VIEW
@@ -117,6 +138,8 @@ function PassengerView({ user }) {
           <div><p className="text-gray-500 dark:text-gray-400 mb-1">Good Human Score</p><p className="font-semibold text-green-600 dark:text-green-400">{user?.good_human_score ?? 400}/1000</p></div>
         </div>
       </div>
+
+      <RewardsSummary />
 
       <div>
         <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-5">🔔 Account Notifications</h2>

@@ -139,6 +139,12 @@ Good Human Score = 400 / 1000
 
 Scores are clamped between `0` and `1000`. An upheld complaint can reduce the accused passenger's score. A genuine upheld complaint rewards the reporter with `+5`. A complaint rejected as spam or false reduces the reporter's score by `25`.
 
+Score bands are **Low (0–199, red)**, **Safe (200–499, yellow)**, **Good (500–749, green)**, and **Excellent (750–1000, deep green)**. The safe threshold is 200. `RailCoins` are a separate, spendable balance and never substitute for the score. Currently, passengers earn +5 RailCoins when a manager upholds their genuine report (+5 Good Human Score). Unverified, duplicate, and spam reports do not earn coins.
+
+The **RailAssist Rewards Store** offers separate Premium durations: 1 day, 1 week, 1 month, 3 months, 6 months, and 1 year. The main landing page also explains Premium and links users to the plan selector. Each plan displays both its RailCoins price and an INR money price for future activation.
+
+The home-page Premium plan buttons currently open `/premium/apply` with the selected plan. Passengers submit their name, email, phone, expected usage, and reason for wanting Premium. Applications are stored with `PENDING` status for review; payment and activation are not processed yet.
+
 ### Default category penalties
 
 | Category | Default fine | Default score penalty |
@@ -233,8 +239,16 @@ All API routes are implemented in `src/app/api/`.
 | `PATCH` | `/api/complaints/:id` | Manager/Admin | Resolve a complaint or decide an appeal |
 | `POST` | `/api/complaints/:id/appeal` | Accused passenger | Submit an appeal for re-review |
 | `GET` | `/api/notifications` | Authenticated | List private notifications |
+| `GET` | `/api/rewards/catalog` | Passenger | List active coupons, premium plans, and reward configuration |
+| `GET` | `/api/rewards/state` | Passenger | Read score band, safe threshold, coins, and active plan |
+| `GET` | `/api/rewards/history` | Passenger | Read private redemption and score ledgers |
+| `POST` | `/api/rewards/redeem` | Passenger | Atomically redeem a coupon or plan with RailCoins |
+| `GET` | `/api/admin/rewards` | Admin | View reward catalog and plans |
+| `PATCH` | `/api/admin/rewards` | Admin | Update safe reward fields (catalog/plans remain DB-configurable) |
 
 The complaint review endpoint accepts `reporter_message` and `accused_message` fields for private recipient-specific messages.
+
+The existing admin portal does not yet include a dedicated reward-editor screen; administrators can use the protected reward configuration endpoint or update the seeded MongoDB catalog. Booking priority continues to use the existing 700+ policy, not the 200 safe threshold.
 
 ## Project structure
 

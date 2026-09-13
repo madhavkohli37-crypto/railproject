@@ -12,6 +12,7 @@ const NAV_LINKS = [
   { href: '/book', label: 'Book Assistance', authOnly: true, roles: ['PASSENGER'] },
   { href: '/dashboard', label: 'My Dashboard', authOnly: true },
   { href: '/report', label: 'Report Activity', authOnly: true, roles: ['PASSENGER'] },
+  { href: '/rewards', label: 'Rewards', authOnly: true, roles: ['PASSENGER'] },
 ];
 
 export default function Navbar() {

@@ -55,6 +55,8 @@ export async function POST(req) {
         phone: user.phone,
         role: user.role || 'PASSENGER',
         good_human_score: user.good_human_score ?? DEFAULT_GOOD_HUMAN_SCORE,
+        reward_coins: user.reward_coins ?? 0,
+        reward_plan: user.reward_plan || null,
         priority_eligible: (user.good_human_score ?? DEFAULT_GOOD_HUMAN_SCORE) >= 700,
       },
     });

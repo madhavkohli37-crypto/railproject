@@ -46,6 +46,14 @@ const TESTIMONIALS = [
   { name: 'Anita Patel', city: 'Ahmedabad', text: 'Three heavy bags and two kids — the porter handled everything professionally. Great value for money!', rating: 5 },
 ];
 
+const PREMIUM_PLANS = [
+  { name: '1 Day', price: '₹29', coins: '75 RailCoins', detail: 'Try Premium for a single journey or short visit.' },
+  { name: '1 Week', price: '₹79', coins: '150 RailCoins', detail: 'Ideal for a short trip or weekly travel.' },
+  { name: '1 Month', price: '₹149', coins: '300 RailCoins', detail: 'For regular monthly railway assistance.' },
+  { name: '6 Months', price: '₹599', coins: '1,300 RailCoins', detail: 'Better value for frequent passengers.' },
+  { name: '1 Year', price: '₹999', coins: '2,200 RailCoins', detail: 'Best value for year-round travel.' },
+];
+
 export default function LandingPage() {
   return (
     <div className="animate-fade-in">
@@ -134,6 +142,46 @@ export default function LandingPage() {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ─────────── PREMIUM ─────────── */}
+      <section id="premium" className="py-20 px-4 bg-gradient-to-br from-[#fff7ed] via-white to-[#eff6ff] dark:from-[#24170d] dark:via-[#111827] dark:to-[#0d1b2a]">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-10">
+            <div className="ir-divider mx-auto" />
+            <h2 className="section-title">RailAssist Premium</h2>
+            <p className="section-subtitle max-w-2xl mx-auto">Choose a plan based on how often you travel. Get priority support, premium rewards, and a smoother RailAssist experience.</p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+            {PREMIUM_PLANS.map(plan => (
+              <div key={plan.name} className="card border-t-4 border-[#E85D04] flex flex-col">
+                <div className="text-[#E85D04] font-extrabold text-lg">Premium</div>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white mt-1">{plan.name}</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-3 flex-1">{plan.detail}</p>
+                <div className="mt-5 text-2xl font-extrabold text-[#003087] dark:text-blue-300">{plan.price}</div>
+                <div className="text-xs text-orange-600 dark:text-orange-300 font-semibold mt-1">or {plan.coins}</div>
+                <Link href={`/premium/apply?plan=${encodeURIComponent(plan.name)}`} className="btn-primary text-center mt-4">View &amp; buy plan</Link>
+              </div>
+            ))}
+          </div>
+          <div className="card max-w-4xl mx-auto">
+            <div className="grid md:grid-cols-2 gap-6">
+              <div>
+                <h3 className="text-lg font-bold dark:text-white mb-3">What Premium includes</h3>
+                <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-300">
+                  <li>✅ Priority support for RailAssist requests</li>
+                  <li>✅ Access to Premium reward offers</li>
+                  <li>✅ Better reward opportunities for responsible activity</li>
+                  <li>✅ Premium membership status shown in your account</li>
+                </ul>
+              </div>
+              <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 text-sm text-gray-600 dark:text-gray-300">
+                <strong className="text-gray-900 dark:text-white">Two ways to pay</strong>
+                <p className="mt-2">Buy Premium directly with the displayed INR price, or redeem RailCoins earned through verified positive activity. Money checkout requires a connected payment gateway before real charges can be processed.</p>
+              </div>
+            </div>
           </div>
         </div>
       </section>

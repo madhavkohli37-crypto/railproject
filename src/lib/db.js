@@ -48,6 +48,9 @@ async function initializeCollections(db) {
     if (!collectionNames.includes('bookings')) await db.createCollection('bookings');
     if (!collectionNames.includes('complaints')) await db.createCollection('complaints');
     if (!collectionNames.includes('notifications')) await db.createCollection('notifications');
+    for (const name of ['reward_catalog', 'reward_plans', 'reward_coupons', 'reward_transactions', 'score_transactions', 'reward_config', 'premium_applications', 'audit_logs']) {
+      if (!collectionNames.includes(name)) await db.createCollection(name);
+    }
     if (!collectionNames.includes('sequences')) {
       await db.createCollection('sequences');
       await db.collection('sequences').insertMany([
@@ -64,6 +67,15 @@ async function initializeCollections(db) {
     if (!await db.collection('sequences').findOne({ _id: 'notificationId' })) {
       await db.collection('sequences').insertOne({ _id: 'notificationId', seq: 1 });
     }
+    if (!await db.collection('sequences').findOne({ _id: 'scoreTransactionId' })) {
+      await db.collection('sequences').insertOne({ _id: 'scoreTransactionId', seq: 1 });
+    }
+    if (!await db.collection('sequences').findOne({ _id: 'rewardTransactionId' })) {
+      await db.collection('sequences').insertOne({ _id: 'rewardTransactionId', seq: 1 });
+    }
+    await db.collection('reward_transactions').createIndex({ user_id: 1, idempotency_key: 1 }, { unique: true });
+    await db.collection('score_transactions').createIndex({ idempotency_key: 1 }, { unique: true });
+    await seedRewards(db);
 
     // Seed default admin
     const adminExists = await db.collection('users').findOne({ email: 'admin@railassist.com' });
@@ -78,6 +90,29 @@ async function initializeCollections(db) {
         created_at: new Date().toISOString()
       });
       console.log('✅ Seeded default admin (admin@railassist.com / 0000)');
+    }
+
+    async function seedRewards(db) {
+      if (!await db.collection('reward_config').findOne({ _id: 'defaults' })) {
+        await db.collection('reward_config').insertOne({ _id: 'defaults', safe_score_threshold: 200, max_score: 1000, coin_name: 'RailCoins' });
+      }
+      await db.collection('reward_catalog').updateOne({ id: 'tea-voucher-50' }, { $set: { title: '₹50 RailAssist food voucher', description: 'Valid at participating RailAssist food partners.', coupon_code: 'RAILASSIST50' } });
+      const plans = [
+        ['premium-1-day', 'RailAssist Premium — 1 Day', 1, 75, 29],
+        ['premium-1-week', 'RailAssist Premium — 1 Week', 7, 150, 79],
+        ['premium-1-month', 'RailAssist Premium — 1 Month', 30, 300, 149],
+        ['premium-3-months', 'RailAssist Premium — 3 Months', 90, 750, 349],
+        ['premium-6-months', 'RailAssist Premium — 6 Months', 180, 1300, 599],
+        ['premium-1-year', 'RailAssist Premium — 1 Year', 365, 2200, 999],
+      ];
+      await db.collection('reward_plans').updateOne({ id: 'safe-traveller' }, { $set: { active: false } });
+      for (const [id, title, duration_days, cost_coins, money_price] of plans) {
+        await db.collection('reward_plans').updateOne(
+          { id },
+          { $set: { title, description: `${title} with priority support and premium rewards.`, duration_days, cost_coins, money_price, currency: 'INR', minimum_score: 0, active: true, benefits: ['Priority support', 'Exclusive RailCoins offers'] } },
+          { upsert: true },
+        );
+      }
     }
 
     // Seed default employee
@@ -162,7 +197,10 @@ export async function nextId(table, dbInstance = null) {
     'bookings': 'bookingId',
     'complaints': 'complaintId',
     'complaintAppeals': 'complaintAppealId',
-    'notifications': 'notificationId'
+    'notifications': 'notificationId',
+    'premiumApplications': 'premiumApplicationId',
+    'scoreTransactions': 'scoreTransactionId',
+    'rewardTransactions': 'rewardTransactionId'
   };
 
   const result = await db.collection('sequences').findOneAndUpdate(

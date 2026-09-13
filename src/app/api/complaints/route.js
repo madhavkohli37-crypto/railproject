@@ -57,6 +57,7 @@ export async function POST(req) {
       images: images.map(image => ({ name: image.name || 'evidence', type: image.type || 'image/jpeg', data: image.data })),
       status: 'OPEN',
       resolution: null,
+      reward: { status: 'PENDING', genuine_report_score: 5, genuine_report_coins: 5, pending_since: now },
       created_at: now,
       updated_at: now,
     };

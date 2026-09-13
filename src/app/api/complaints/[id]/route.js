@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getDB, nextId, DEFAULT_GOOD_HUMAN_SCORE } from '@/lib/db';
 import { verifyToken } from '@/lib/auth';
+import { addScoreTransaction } from '@/lib/rewards';
 
 const ACTIONS = ['UPHOLD', 'DISMISS', 'REJECT_SPAM', 'REQUEST_INFO', 'ACCEPT_APPEAL', 'DENY_APPEAL'];
 const DEFAULT_PENALTIES = {
@@ -90,7 +91,7 @@ export async function PATCH(req, { params }) {
         const restoredFines = Math.max(0, (accused.outstanding_fines || 0) - (complaint.resolution.fine_amount || 0));
         await db.collection('users').updateOne({ id: accusedId }, { $set: { good_human_score: restoredScore, outstanding_fines: restoredFines } });
         const reporter = await db.collection('users').findOne({ id: complaint.reporter_id });
-        if (reporter) await db.collection('users').updateOne({ id: reporter.id }, { $set: { good_human_score: Math.max(0, (reporter.good_human_score ?? DEFAULT_GOOD_HUMAN_SCORE) - complaint.resolution.reporter_score_change) } });
+        if (reporter) await addScoreTransaction(db, reporter.id, { delta: -complaint.resolution.reporter_score_change, coins: 0, reason: 'APPEAL_ACCEPTED_REPORT_REVERSED', referenceId: complaintId, idempotencyKey: `complaint:${complaintId}:appeal-reversal` });
         await createNotification(db, accusedId, 'Appeal accepted', `Your appeal for complaint #${complaintId} was accepted. Your fine was reversed and ${complaint.resolution.score_penalty} Good Human Score points were restored.${accused_message?.trim() ? ` Message from the complaint manager: ${accused_message.trim()}` : ''}`, complaintId, { fine_reversed: complaint.resolution.fine_amount, score_change: complaint.resolution.score_penalty, new_score: restoredScore });
       } else {
         await createNotification(db, accusedId, 'Appeal denied', `Your appeal for complaint #${complaintId} was reviewed and denied. ${notes?.trim() || 'The original decision remains in effect.'}${accused_message?.trim() ? ` Message from the complaint manager: ${accused_message.trim()}` : ''}`, complaintId, { score_change: 0 });
@@ -102,20 +103,23 @@ export async function PATCH(req, { params }) {
     await db.collection('complaints').updateOne({ id: complaintId }, { $set: { status, resolution, updated_at: now } });
 
     if (action === 'UPHOLD') {
-      const accusedScore = Math.max(0, Math.min(1000, (accused.good_human_score ?? DEFAULT_GOOD_HUMAN_SCORE) - scorePenalty));
-      await db.collection('users').updateOne({ id: accused.id }, { $set: { good_human_score: accusedScore }, $inc: { outstanding_fines: fineAmount } });
+      const accusedResult = await addScoreTransaction(db, accused.id, { delta: -scorePenalty, coins: 0, reason: 'COMPLAINT_UPHELD_PENALTY', referenceId: complaintId, idempotencyKey: `complaint:${complaintId}:accused-penalty` });
+      const accusedScore = accusedResult.user.good_human_score;
+      await db.collection('users').updateOne({ id: accused.id }, { $inc: { outstanding_fines: fineAmount } });
       await createNotification(db, accused.id, 'Complaint upheld against your account', `Complaint #${complaintId} was upheld. Fine: ₹${fineAmount}. Good Human Score reduced by ${scorePenalty} to ${accusedScore}.${accused_message?.trim() ? ` Message from the complaint manager: ${accused_message.trim()}` : ''}`, complaintId, { fine: fineAmount, score_change: -scorePenalty, new_score: accusedScore });
       const reporter = await db.collection('users').findOne({ id: complaint.reporter_id });
       if (reporter) {
-        const reporterScore = Math.min(1000, (reporter.good_human_score ?? DEFAULT_GOOD_HUMAN_SCORE) + 5);
-        await db.collection('users').updateOne({ id: reporter.id }, { $set: { good_human_score: reporterScore } });
+        const reporterResult = await addScoreTransaction(db, reporter.id, { delta: 5, coins: 5, reason: 'GENUINE_COMPLAINT_REPORT', referenceId: complaintId, idempotencyKey: `complaint:${complaintId}:reporter-reward` });
+        const reporterScore = reporterResult.user.good_human_score;
+        await db.collection('complaints').updateOne({ id: complaintId }, { $set: { 'reward.status': 'AWARDED', 'reward.awarded_at': now } });
         await createNotification(db, reporter.id, 'Thank you for your genuine report', `Complaint #${complaintId} was upheld. You received +5 Good Human Score; your new score is ${reporterScore}.${reporter_message?.trim() ? ` Message from the complaint manager: ${reporter_message.trim()}` : ''}`, complaintId, { score_change: 5, new_score: reporterScore });
       }
     } else if (action === 'REJECT_SPAM') {
       const reporter = await db.collection('users').findOne({ id: complaint.reporter_id, role: 'PASSENGER' });
       if (reporter) {
-        const reporterScore = Math.max(0, (reporter.good_human_score ?? DEFAULT_GOOD_HUMAN_SCORE) - 25);
-        await db.collection('users').updateOne({ id: reporter.id }, { $set: { good_human_score: reporterScore } });
+        const reporterResult = await addScoreTransaction(db, reporter.id, { delta: -25, coins: 0, reason: 'FALSE_COMPLAINT_REPORT', referenceId: complaintId, idempotencyKey: `complaint:${complaintId}:false-report-penalty` });
+        const reporterScore = reporterResult.user.good_human_score;
+        await db.collection('complaints').updateOne({ id: complaintId }, { $set: { 'reward.status': 'REVOKED', 'reward.revoked_at': now } });
         await createNotification(db, reporter.id, 'Complaint rejected as spam', `Complaint #${complaintId} was found to be false or spam. Your Good Human Score was reduced by 25 to ${reporterScore}.${reporter_message?.trim() ? ` Message from the complaint manager: ${reporter_message.trim()}` : ''}`, complaintId, { score_change: -25, new_score: reporterScore });
       }
     } else if (action === 'DISMISS') {
