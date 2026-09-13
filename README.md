@@ -141,9 +141,53 @@ Scores are clamped between `0` and `1000`. An upheld complaint can reduce the ac
 
 Score bands are **Low (0–199, red)**, **Safe (200–499, yellow)**, **Good (500–749, green)**, and **Excellent (750–1000, deep green)**. The safe threshold is 200. `RailCoins` are a separate, spendable balance and never substitute for the score. Currently, passengers earn +5 RailCoins when a manager upholds their genuine report (+5 Good Human Score). Unverified, duplicate, and spam reports do not earn coins.
 
-The **RailAssist Rewards Store** offers separate Premium durations: 1 day, 1 week, 1 month, 3 months, 6 months, and 1 year. The main landing page also explains Premium and links users to the plan selector. Each plan displays both its RailCoins price and an INR money price for future activation.
+## RailAssist Premium
 
-The home-page Premium plan buttons currently open `/premium/apply` with the selected plan. Passengers submit their name, email, phone, expected usage, and reason for wanting Premium. Applications are stored with `PENDING` status for review; payment and activation are not processed yet.
+RailAssist Premium is an optional membership that passengers can request according to how often they travel. The full Premium explanation is shown in the **RailAssist Premium** section on the home page. Premium is separate from the Good Human Score and RailCoins.
+
+### Premium plans
+
+| Plan | Money price | RailCoins price |
+| --- | ---: | ---: |
+| 1 Day | ₹29 | 75 RailCoins |
+| 1 Week | ₹79 | 150 RailCoins |
+| 1 Month | ₹149 | 300 RailCoins |
+| 6 Months | ₹599 | 1,300 RailCoins |
+| 1 Year | ₹999 | 2,200 RailCoins |
+
+Plan prices and durations are seeded in the `reward_plans` collection and can be adjusted through the protected admin reward configuration API.
+
+### Premium benefits
+
+The current Premium concept includes:
+
+- Priority support for RailAssist requests
+- Access to Premium reward offers
+- Better reward opportunities for responsible activity
+- Premium membership status in the passenger account
+
+Premium does not remove physical railway queues or operational delays. Any priority handling applies only to RailAssist-controlled support and service workflows.
+
+### Applying for Premium
+
+The home-page plan buttons open `/premium/apply` with the selected duration. The passenger submits:
+
+- Selected Premium plan
+- Full name
+- Email
+- Phone number
+- Expected usage
+- Reason for wanting Premium
+
+Applications are stored with `PENDING` status for review. The application endpoint is:
+
+```text
+POST /api/premium/applications
+```
+
+Applications are stored in `railassist.premium_applications` and create a `PREMIUM_APPLICATION_SUBMITTED` entry in `audit_logs`. Only authenticated passengers can submit them.
+
+At present, applications do not appear in a manager or administrator dashboard. Payment, approval, and Premium activation are not automated; direct database access is required to review pending applications. The displayed money prices are not charged until a payment gateway and approval workflow are connected.
 
 ### Default category penalties
 
@@ -239,6 +283,7 @@ All API routes are implemented in `src/app/api/`.
 | `PATCH` | `/api/complaints/:id` | Manager/Admin | Resolve a complaint or decide an appeal |
 | `POST` | `/api/complaints/:id/appeal` | Accused passenger | Submit an appeal for re-review |
 | `GET` | `/api/notifications` | Authenticated | List private notifications |
+| `POST` | `/api/premium/applications` | Passenger | Submit a Premium plan application |
 | `GET` | `/api/rewards/catalog` | Passenger | List active coupons, premium plans, and reward configuration |
 | `GET` | `/api/rewards/state` | Passenger | Read score band, safe threshold, coins, and active plan |
 | `GET` | `/api/rewards/history` | Passenger | Read private redemption and score ledgers |
@@ -298,6 +343,7 @@ The default MongoDB database is `railassist`. The application uses:
 - `audit_logs` — administrative, booking, complaint, and appeal activity
 - `complaints` — reports, evidence, resolutions, private manager messages, and appeals
 - `notifications` — private account-impact and manager-message notifications
+- `premium_applications` — passenger Premium requests with selected plan, contact details, reason, status, and timestamps
 
 Passwords are stored as bcrypt hashes. `.env.local` and production credentials must never be committed.
 
