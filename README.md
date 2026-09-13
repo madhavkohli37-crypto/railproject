@@ -1,4 +1,4 @@
-# RailAssist
+# 🚆 RailAssist
 
 RailAssist is a full-stack Indian Railway assistance and passenger civic-management platform built with **Next.js, React, MongoDB, and JWT authentication**.
 
@@ -6,9 +6,13 @@ Passengers can book verified railway assistance services such as porter, wheelch
 
 This project is an application-level prototype. Real railway deployment must follow applicable railway rules, privacy requirements, legal requirements, and due-process procedures.
 
-## Features
+> 💙 **Travel easier. Report responsibly. Be rewarded.**
+>
+> RailAssist brings railway assistance, passenger safety, civic reporting, and responsible-travel rewards together in one platform.
 
-### Passenger features
+## ✨ Features
+
+### 🧳 Passenger features
 
 - Signup and login with JWT authentication
 - Unique display user ID, for example `U-42`
@@ -26,14 +30,14 @@ This project is an application-level prototype. Real railway deployment must fol
 - Complete accused-passenger case details when a complaint is upheld against the account
 - Appeal and re-review request for an upheld decision
 
-### Provider features
+### 👷 Provider features
 
 - Provider login
 - Assigned-job dashboard
 - Availability toggle
 - Job status updates
 
-### Complaint manager features
+### 🧭 Complaint manager features
 
 - Dedicated `MANAGER` role and portal
 - Complaint queue with evidence and incident details
@@ -47,7 +51,7 @@ This project is an application-level prototype. Real railway deployment must fol
 - Separate private message for the accused passenger
 - Appeal review and written appeal decision
 
-### Administrator features
+### 🛡️ Administrator features
 
 - Master admin portal
 - User, employee, provider, booking, application, and settings management
@@ -56,7 +60,7 @@ This project is an application-level prototype. Real railway deployment must fol
 - Audit log access
 - Complaint and account oversight
 
-## Passenger Civic Reporting System
+## 📣 Passenger Civic Reporting System
 
 Passengers can use **Report Activity** from the dashboard or open `/report` directly. Reports may cover:
 
@@ -70,7 +74,7 @@ A report contains a category, description, station, optional train number, optio
 
 Each report receives a complaint ID. The reporter can see their complaint history. If a complaint is upheld against an identified passenger, that accused passenger can also see the complete case details, including the description, location, train/platform details, evidence images, decision, fine, score penalty, and manager explanation.
 
-## Complaint lifecycle
+## 🔄 Complaint lifecycle
 
 ```text
 Passenger observes activity
@@ -101,7 +105,7 @@ Manager/admin accepts or denies appeal
 
 A report does not automatically punish anyone. Only an authorized manager or administrator can apply a fine or Good Human Score penalty.
 
-## Complaint review decisions
+## ⚖️ Complaint review decisions
 
 | Action | Meaning |
 | --- | --- |
@@ -120,7 +124,7 @@ When reviewing a complaint, the manager can write:
 
 Each passenger receives only the message intended for that passenger through their notifications and complaint log.
 
-## Appeals and re-review
+## 🔁 Appeals and re-review
 
 An accused passenger can appeal an upheld complaint from **My Complaint Logs**. The passenger must provide an objection of at least 10 characters. Only one pending appeal can exist at a time.
 
@@ -129,7 +133,7 @@ The complaint manager or administrator can review a pending appeal. A written ex
 - **Accepted appeal:** the fine is reversed, the deducted Good Human Score points are restored, and both account impacts are notified.
 - **Denied appeal:** the original decision remains active and the accused passenger receives the appeal explanation.
 
-## Good Human Score
+## 🌱 Good Human Score
 
 Every newly created passenger account starts with:
 
@@ -139,15 +143,22 @@ Good Human Score = 400 / 1000
 
 Scores are clamped between `0` and `1000`. An upheld complaint can reduce the accused passenger's score. A genuine upheld complaint rewards the reporter with `+5`. A complaint rejected as spam or false reduces the reporter's score by `25`.
 
-Score bands are **Low (0–199, red)**, **Safe (200–499, yellow)**, **Good (500–749, green)**, and **Excellent (750–1000, deep green)**. The safe threshold is 200. `RailCoins` are a separate, spendable balance and never substitute for the score. Currently, passengers earn +5 RailCoins when a manager upholds their genuine report (+5 Good Human Score). Unverified, duplicate, and spam reports do not earn coins.
+Score bands are:
 
-## RailAssist Premium
+- 🔴 **Low / At Risk:** `0–199`
+- 🟡 **Safe / Medium:** `200–499`
+- 🟢 **Good:** `500–749`
+- 💚 **Excellent:** `750–1000`
+
+The safe threshold is `200`. `RailCoins` are a separate, spendable balance and never substitute for the score. Currently, passengers earn `+5 RailCoins` when a manager upholds their genuine report (`+5 Good Human Score`). Unverified, duplicate, and spam reports do not earn coins.
+
+## ⭐ RailAssist Premium
 
 RailAssist Premium is an optional membership that passengers can request according to how often they travel. The full Premium explanation is shown in the **RailAssist Premium** section on the home page. Premium is separate from the Good Human Score and RailCoins.
 
-### Premium plans
+### 🗓️ Premium plans
 
-| Plan | Money price | RailCoins price |
+| 🌟 Plan | 💳 Money price | 🪙 RailCoins price |
 | --- | ---: | ---: |
 | 1 Day | ₹29 | 75 RailCoins |
 | 1 Week | ₹79 | 150 RailCoins |
@@ -157,18 +168,18 @@ RailAssist Premium is an optional membership that passengers can request accordi
 
 Plan prices and durations are seeded in the `reward_plans` collection and can be adjusted through the protected admin reward configuration API.
 
-### Premium benefits
+### 🎁 Premium benefits
 
 The current Premium concept includes:
 
-- Priority support for RailAssist requests
-- Access to Premium reward offers
-- Better reward opportunities for responsible activity
-- Premium membership status in the passenger account
+- 🎧 Priority support for RailAssist requests
+- 🎁 Access to Premium reward offers
+- 🌱 Better reward opportunities for responsible activity
+- ⭐ Premium membership status in the passenger account
 
 Premium does not remove physical railway queues or operational delays. Any priority handling applies only to RailAssist-controlled support and service workflows.
 
-### Applying for Premium
+### 📝 Applying for Premium
 
 The home-page plan buttons open `/premium/apply` with the selected duration. The passenger submits:
 
@@ -189,7 +200,7 @@ Applications are stored in `railassist.premium_applications` and create a `PREMI
 
 At present, applications do not appear in a manager or administrator dashboard. Payment, approval, and Premium activation are not automated; direct database access is required to review pending applications. The displayed money prices are not charged until a payment gateway and approval workflow are connected.
 
-### Default category penalties
+### 🚨 Default category penalties
 
 | Category | Default fine | Default score penalty |
 | --- | ---: | ---: |
@@ -201,7 +212,7 @@ At present, applications do not appear in a manager or administrator dashboard. 
 
 Managers can override the default fine and score penalty during review. Scores never fall below zero or above 1000.
 
-## Priority booking and benefits
+## 🎫 Priority booking and benefits
 
 Passengers with a Good Human Score of **700 or above** are eligible to request priority booking. Eligibility does not guarantee capacity or availability; the normal booking and operational checks still apply.
 
@@ -215,7 +226,7 @@ Potential high-score benefits include:
 
 The current application enforces the `700+` priority threshold. Benefits beyond priority eligibility are policy concepts and should be configured before production use.
 
-## Notifications
+## 🔔 Notifications
 
 Notifications are created for relevant complaint outcomes and account impacts, including:
 
@@ -231,7 +242,7 @@ Notifications are created for relevant complaint outcomes and account impacts, i
 
 Passengers can view notifications in the dashboard. Notifications are scoped to the authenticated passenger.
 
-## User identity and privacy
+## 🆔 User identity and privacy
 
 Every account has a numeric database ID and a display ID formatted as `U-<id>`, such as `U-42`.
 
@@ -243,7 +254,7 @@ Every account has a numeric database ID and a display ID formatted as `U-<id>`, 
 
 Complaint evidence and passenger information should only be available to authorized users. Passengers should not confront, threaten, or publicly identify an accused person.
 
-## Default accounts
+## 🔐 Default accounts
 
 Development administrator, employee, and complaint-manager credentials are documented in [`admin.md`](./admin.md). The default complaint manager account is:
 
@@ -255,7 +266,7 @@ Role: MANAGER
 
 Change development credentials before any shared or production deployment. Do not commit production credentials.
 
-## API reference
+## 🔌 API reference
 
 All API routes are implemented in `src/app/api/`.
 
@@ -295,7 +306,7 @@ The complaint review endpoint accepts `reporter_message` and `accused_message` f
 
 The existing admin portal does not yet include a dedicated reward-editor screen; administrators can use the protected reward configuration endpoint or update the seeded MongoDB catalog. Booking priority continues to use the existing 700+ policy, not the 200 safe threshold.
 
-## Project structure
+## 🗂️ Project structure
 
 ```text
 railassist/
@@ -332,7 +343,7 @@ railassist/
 └── techstack.md
 ```
 
-## Database collections
+## 🗄️ Database collections
 
 The default MongoDB database is `railassist`. The application uses:
 
@@ -347,7 +358,7 @@ The default MongoDB database is `railassist`. The application uses:
 
 Passwords are stored as bcrypt hashes. `.env.local` and production credentials must never be committed.
 
-## Authentication and authorization
+## 🔑 Authentication and authorization
 
 Supported roles are:
 
@@ -360,7 +371,7 @@ ADMIN
 
 Protected API routes verify the JWT and role before performing sensitive operations. Passengers can access only their own bookings, notifications, and relevant complaint records. Managers and administrators can review complaints. Administrators have master-portal access.
 
-## Tech stack
+## 🧰 Tech stack
 
 | Layer | Technology |
 | --- | --- |
@@ -372,13 +383,13 @@ Protected API routes verify the JWT and role before performing sensitive operati
 | Authentication | JWT and bcryptjs |
 | HTTP client | Axios |
 
-## Requirements
+## ✅ Requirements
 
 - Node.js 18 or newer
 - npm
 - MongoDB Community Edition or MongoDB Atlas
 
-## Environment variables
+## ⚙️ Environment variables
 
 Create `.env.local` in the repository root:
 
@@ -390,7 +401,7 @@ NEXT_PUBLIC_SITE_URL=http://localhost:3000
 
 For MongoDB Atlas, replace `MONGODB_URI` with the Atlas connection string.
 
-## Getting started
+## 🚀 Getting started
 
 Install dependencies:
 
@@ -415,7 +426,7 @@ npm start
 
 The first database connection creates the required collections and seeds the configured development accounts. See [`admin.md`](./admin.md) for credential and account-management details.
 
-## Security and operational considerations
+## 🔒 Security and operational considerations
 
 The prototype includes JWT authentication, bcrypt password hashing, role checks, image validation, upload limits, and audit logging. A production deployment should additionally add:
 
@@ -436,10 +447,10 @@ Never commit:
 .env.local
 ```
 
-## Disclaimer
+## ⚠️ Disclaimer
 
 RailAssist's Good Human Score, fines, priority booking, discounts, complimentary food, and other benefits are configurable application concepts. In a production railway deployment, passenger identification, penalties, fines, priority allocation, and benefits must operate under applicable railway rules, legal requirements, privacy regulations, and due-process procedures.
 
-## License
+## 📄 License
 
 This project is intended for educational, demonstration, and prototype purposes unless otherwise specified by the project owner.
