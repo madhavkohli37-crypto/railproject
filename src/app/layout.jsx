@@ -3,6 +3,7 @@ import { ThemeProvider } from '@/context/ThemeContext';
 import { AuthProvider } from '@/context/AuthContext';
 import Navbar from '@/components/Navbar';
 import Link from 'next/link';
+import RealtimeBridge from '@/components/RealtimeBridge';
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://railassist.vercel.app';
 
@@ -86,6 +87,7 @@ export default function RootLayout({ children }) {
       <body className="min-h-screen bg-[#f5f7fa] dark:bg-[#0d1b2a] text-gray-900 dark:text-gray-100 transition-colors duration-300 flex flex-col justify-between">
         <ThemeProvider>
           <AuthProvider>
+            <RealtimeBridge />
             <Navbar />
             <main className="flex-1">
               {children}

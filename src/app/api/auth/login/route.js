@@ -57,7 +57,7 @@ export async function POST(req) {
         good_human_score: user.good_human_score ?? DEFAULT_GOOD_HUMAN_SCORE,
         reward_coins: user.reward_coins ?? 0,
         reward_plan: user.reward_plan || null,
-        priority_eligible: (user.good_human_score ?? DEFAULT_GOOD_HUMAN_SCORE) >= 700,
+        priority_eligible: (user.good_human_score ?? DEFAULT_GOOD_HUMAN_SCORE) > 700,
       },
     });
   } catch (err) {

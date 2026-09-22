@@ -53,7 +53,32 @@ function PassengerView({ user }) {
     }
   };
 
-  useEffect(() => { fetchBookings(); }, []);
+  useEffect(() => {
+    fetchBookings();
+    const refresh = () => fetchBookings();
+    window.addEventListener('railassist:booking:new', refresh);
+    window.addEventListener('railassist:booking:offer', refresh);
+    window.addEventListener('railassist:booking:accepted', refresh);
+    window.addEventListener('railassist:booking:removed', refresh);
+    window.addEventListener('railassist:booking:cancelled', refresh);
+    window.addEventListener('railassist:provider:arrived', refresh);
+    window.addEventListener('railassist:booking:started', refresh);
+    window.addEventListener('railassist:booking:completed', refresh);
+    window.addEventListener('railassist:booking:updated', refresh);
+    window.addEventListener('railassist:sync', refresh);
+    return () => {
+      window.removeEventListener('railassist:booking:new', refresh);
+      window.removeEventListener('railassist:booking:offer', refresh);
+      window.removeEventListener('railassist:booking:accepted', refresh);
+      window.removeEventListener('railassist:booking:removed', refresh);
+      window.removeEventListener('railassist:booking:cancelled', refresh);
+      window.removeEventListener('railassist:provider:arrived', refresh);
+      window.removeEventListener('railassist:booking:started', refresh);
+      window.removeEventListener('railassist:booking:completed', refresh);
+      window.removeEventListener('railassist:booking:updated', refresh);
+      window.removeEventListener('railassist:sync', refresh);
+    };
+  }, []);
 
   useEffect(() => {
     api.get('/complaints')
@@ -63,7 +88,11 @@ function PassengerView({ user }) {
   }, []);
 
   useEffect(() => {
-    api.get('/notifications').then(res => setNotifications(res.data)).catch(() => {});
+    const fetchNotifications = () => api.get('/notifications').then(res => setNotifications(res.data)).catch(() => {});
+    fetchNotifications();
+    const refreshNotifications = () => fetchNotifications();
+    window.addEventListener('railassist:notification:new', refreshNotifications);
+    return () => window.removeEventListener('railassist:notification:new', refreshNotifications);
   }, []);
 
   const handleCancel = async (bookingId) => {
@@ -90,7 +119,7 @@ function PassengerView({ user }) {
     }
   };
 
-  const activeStatuses = ['REQUESTED', 'ASSIGNED', 'PARTIALLY_ASSIGNED', 'ACCEPTED', 'IN_PROGRESS'];
+  const activeStatuses = ['REQUESTED', 'SEARCHING', 'ASSIGNED', 'PARTIALLY_ASSIGNED', 'ACCEPTED', 'ARRIVED', 'STARTED', 'IN_PROGRESS'];
   const activeBookings = bookings.filter(b => activeStatuses.includes(b.status));
   const cancelledBookings = bookings.filter(b => b.status === 'CANCELLED' || b.status === 'REJECTED_OR_CANCELLED');
   const completedBookings = bookings.filter(b => b.status === 'COMPLETED');
@@ -245,8 +274,26 @@ function ProviderView({ user }) {
 
   const fetchJobs = async () => {
     try {
-      const res = await api.get('/provider/dashboard');
-      setJobs(res.data);
+      const [assigned, open] = await Promise.all([
+        api.get('/provider/dashboard'),
+        api.get('/provider/jobs'),
+      ]);
+      const assignedJobs = assigned.data.map(job => ({ ...job, live: true }));
+      const assignedIds = new Set(assignedJobs.map(job => job.booking_id));
+      const openJobs = open.data.flatMap(booking => booking.services
+        .filter(service => ['REQUESTED', 'SEARCHING'].includes(service.status) && !service.provider_id)
+        .map(service => ({
+          ...service,
+          booking_id: booking.id,
+          station: booking.station,
+          train_number: booking.train_number,
+          platform: booking.platform,
+          scheduled_at: booking.scheduled_at,
+          status: 'SEARCHING',
+          live: true,
+        })))
+        .filter(job => !assignedIds.has(job.booking_id));
+      setJobs([...assignedJobs, ...openJobs]);
     } catch (err) {
       console.error(err);
     } finally {
@@ -254,7 +301,30 @@ function ProviderView({ user }) {
     }
   };
 
-  useEffect(() => { fetchJobs(); }, []);
+  useEffect(() => {
+    fetchJobs();
+    const refresh = () => fetchJobs();
+    window.addEventListener('railassist:booking:offer', refresh);
+    window.addEventListener('railassist:booking:accepted', refresh);
+    window.addEventListener('railassist:booking:removed', refresh);
+    window.addEventListener('railassist:booking:cancelled', refresh);
+    window.addEventListener('railassist:provider:arrived', refresh);
+    window.addEventListener('railassist:booking:started', refresh);
+    window.addEventListener('railassist:booking:completed', refresh);
+    window.addEventListener('railassist:booking:updated', refresh);
+    window.addEventListener('railassist:sync', refresh);
+    return () => {
+      window.removeEventListener('railassist:booking:offer', refresh);
+      window.removeEventListener('railassist:booking:accepted', refresh);
+      window.removeEventListener('railassist:booking:removed', refresh);
+      window.removeEventListener('railassist:booking:cancelled', refresh);
+      window.removeEventListener('railassist:provider:arrived', refresh);
+      window.removeEventListener('railassist:booking:started', refresh);
+      window.removeEventListener('railassist:booking:completed', refresh);
+      window.removeEventListener('railassist:booking:updated', refresh);
+      window.removeEventListener('railassist:sync', refresh);
+    };
+  }, []);
 
   const toggleAvailability = async () => {
     try {
@@ -263,10 +333,18 @@ function ProviderView({ user }) {
     } catch { alert('Failed to update availability'); }
   };
 
-  const updateStatus = async (bookingId, status) => {
+  const updateStatus = async (bookingId, status, value) => {
     try {
       setJobs(jobs.map(j => j.booking_id === bookingId ? { ...j, status } : j));
-      await api.patch(`/provider/job/${bookingId}/status`, { status });
+      if (status === 'SEARCHING') {
+        await api.post(`/provider/job/${bookingId}/accept`, { service_type: jobs.find(job => job.booking_id === bookingId)?.type });
+      } else {
+        await api.patch(`/provider/job/${bookingId}/status`, {
+          status,
+          ...(status === 'STARTED' ? { otp: value } : {}),
+          ...(status === 'CANCELLED_BY_PROVIDER' ? { reason: value } : {}),
+        });
+      }
       fetchJobs();
     } catch {
       alert('Failed to update status');
@@ -311,8 +389,11 @@ function ProviderView({ user }) {
               <div className="flex justify-between items-start mb-4">
                 <div>
                   <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold mb-2 ${
+                    job.status === 'SEARCHING' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400' :
                     job.status === 'ASSIGNED' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400' :
                     job.status === 'ACCEPTED' ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400' :
+                    job.status === 'ARRIVED' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400' :
+                    job.status === 'STARTED' ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400' :
                     job.status === 'IN_PROGRESS' ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400' :
                     job.status === 'COMPLETED' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' :
                     'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
@@ -333,17 +414,28 @@ function ProviderView({ user }) {
                 {job.type === 'PORTER' && <div><span className="text-gray-500 dark:text-gray-400 block text-xs">Bags</span><span className="font-semibold dark:text-white">{job.bags_count}</span></div>}
               </div>
               <div className="flex space-x-3 border-t border-gray-100 dark:border-gray-700 pt-4">
-                {job.status === 'ASSIGNED' && (
+                {job.status === 'SEARCHING' && (
                   <>
-                    <button onClick={() => updateStatus(job.booking_id, 'ACCEPTED')} className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg font-semibold flex-1 active:scale-95">✅ Accept</button>
-                    <button onClick={() => updateStatus(job.booking_id, 'REJECTED')} className="bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 text-gray-800 dark:text-white px-6 py-2 rounded-lg font-semibold active:scale-95">❌ Reject</button>
+                    <button onClick={() => updateStatus(job.booking_id, 'SEARCHING')} className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg font-semibold flex-1 active:scale-95">✅ Accept</button>
                   </>
                 )}
                 {job.status === 'ACCEPTED' && (
-                  <button onClick={() => updateStatus(job.booking_id, 'IN_PROGRESS')} className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-2 rounded-lg font-semibold flex-1 active:scale-95">📍 Check-In / Start</button>
+                  <button onClick={() => updateStatus(job.booking_id, 'ARRIVED')} className="bg-purple-500 hover:bg-purple-600 text-white px-6 py-2 rounded-lg font-semibold flex-1 active:scale-95">📍 Provider Arrived</button>
                 )}
-                {job.status === 'IN_PROGRESS' && (
-                  <button onClick={() => updateStatus(job.booking_id, 'COMPLETED')} className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-semibold flex-1 active:scale-95">🏁 Check-Out / Complete</button>
+                {job.status === 'ARRIVED' && (
+                  <button onClick={() => {
+                    const otp = window.prompt('Enter the passenger OTP');
+                    if (otp) updateStatus(job.booking_id, 'STARTED', otp);
+                  }} className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-2 rounded-lg font-semibold flex-1 active:scale-95">🔐 Verify OTP & Start</button>
+                )}
+                {job.status === 'STARTED' && (
+                  <button onClick={() => updateStatus(job.booking_id, 'COMPLETED')} className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-semibold flex-1 active:scale-95">🏁 Complete Service</button>
+                )}
+                {['ACCEPTED', 'ARRIVED'].includes(job.status) && (
+                  <button onClick={() => {
+                    const reason = window.prompt('Why are you cancelling this booking?');
+                    if (reason) updateStatus(job.booking_id, 'CANCELLED_BY_PROVIDER', reason);
+                  }} className="bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 text-gray-800 dark:text-white px-4 py-2 rounded-lg font-semibold">Cancel</button>
                 )}
                 {job.status === 'COMPLETED' && (
                   <div className="text-green-600 dark:text-green-400 font-bold flex items-center justify-center w-full bg-green-50 dark:bg-green-900/30 py-2 rounded-lg">🎉 Job Completed!</div>

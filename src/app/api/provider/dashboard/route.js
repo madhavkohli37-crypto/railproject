@@ -16,6 +16,7 @@ export async function GET(req) {
 
     const jobs = bookings.map(b => {
       const myService = b.services.find(s => s.provider_id === decoded.userId);
+      const { otp_code, otp_hash, ...safeBooking } = b;
       return {
         booking_id: b.id,
         station: b.station,
@@ -25,7 +26,8 @@ export async function GET(req) {
         created_at: b.created_at,
         overall_status: b.status,
         passenger_id: b.user_id,
-        ...myService
+        ...myService,
+        booking: safeBooking
       };
     });
 

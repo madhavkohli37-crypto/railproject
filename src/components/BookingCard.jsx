@@ -3,9 +3,12 @@
 export default function BookingCard({ booking, onCancel }) {
   const statusStyles = {
     REQUESTED: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 border border-yellow-200 dark:border-yellow-800',
+    SEARCHING: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800',
     ASSIGNED: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800',
     PARTIALLY_ASSIGNED: 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-300 border border-blue-200 dark:border-blue-800',
     ACCEPTED: 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800',
+    ARRIVED: 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 border border-purple-200 dark:border-purple-800',
+    STARTED: 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 border border-orange-200 dark:border-orange-800',
     IN_PROGRESS: 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 border border-orange-200 dark:border-orange-800',
     COMPLETED: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800',
     CANCELLED: 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800',
@@ -14,9 +17,12 @@ export default function BookingCard({ booking, onCancel }) {
 
   const statusIcons = {
     REQUESTED: '⏳',
+    SEARCHING: '🔎',
     ASSIGNED: '🔄',
     PARTIALLY_ASSIGNED: '🔄',
     ACCEPTED: '✅',
+    ARRIVED: '📍',
+    STARTED: '🏃',
     IN_PROGRESS: '🏃',
     COMPLETED: '🏁',
     CANCELLED: '❌',
@@ -31,7 +37,9 @@ export default function BookingCard({ booking, onCancel }) {
     });
   };
 
-  const canCancel = ['REQUESTED', 'ASSIGNED', 'PARTIALLY_ASSIGNED', 'ACCEPTED'].includes(booking.status);
+  const canCancel = ['REQUESTED', 'SEARCHING', 'ASSIGNED', 'PARTIALLY_ASSIGNED', 'ACCEPTED', 'ARRIVED', 'IN_PROGRESS'].includes(booking.status)
+    && typeof onCancel === 'function';
+  const searching = ['REQUESTED', 'SEARCHING'].includes(booking.status);
 
   return (
     <div className="card shadow-sm hover:shadow-md transition-all">
@@ -62,6 +70,23 @@ export default function BookingCard({ booking, onCancel }) {
       </div>
 
       <div className="mb-4">
+        {searching && (
+          <div className="mb-4 overflow-hidden rounded-xl border border-blue-200 bg-gradient-to-r from-blue-50 via-indigo-50 to-blue-50 p-4 dark:border-blue-800 dark:from-blue-900/20 dark:via-indigo-900/20 dark:to-blue-900/20">
+            <div className="flex items-center gap-3">
+              <div className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-blue-600 text-2xl shadow-lg shadow-blue-500/30">
+                <span className="absolute inset-0 rounded-full border-2 border-blue-400 animate-ping opacity-60" />
+                🧳
+              </div>
+              <div className="min-w-0">
+                <p className="font-bold text-blue-900 dark:text-blue-200">Finding a porter near you<span className="inline-block w-5 text-left animate-pulse">…</span></p>
+                <p className="text-xs text-blue-700 dark:text-blue-300">Your request is being sent instantly to available porters at {booking.station}.</p>
+              </div>
+            </div>
+            <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-blue-200 dark:bg-blue-950">
+              <div className="h-full w-1/2 rounded-full bg-blue-600 animate-[slide_1.5s_ease-in-out_infinite]" />
+            </div>
+          </div>
+        )}
         <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Requested Services</h4>
         <div className="space-y-2">
           {booking.services.map((srv, idx) => (
@@ -70,7 +95,14 @@ export default function BookingCard({ booking, onCancel }) {
                 <span className="font-semibold text-gray-800 dark:text-gray-200">{srv.type}</span>
                 {srv.bags_count && <span className="text-gray-500 dark:text-gray-400 ml-1">({srv.bags_count} bags)</span>}
                 {srv.provider_name ? (
-                  <div className="text-xs text-blue-600 dark:text-blue-400 font-medium mt-0.5">Assigned: {srv.provider_name}</div>
+                  <div className="mt-2 rounded-lg border border-green-200 bg-green-50 p-2 text-xs dark:border-green-800 dark:bg-green-900/20">
+                    <div className="font-bold text-green-800 dark:text-green-300">✅ Porter found</div>
+                    <div className="mt-1 text-gray-700 dark:text-gray-200">Name: {srv.provider_name}</div>
+                    <div className="text-gray-600 dark:text-gray-300">Provider ID: {srv.provider_id}</div>
+                    {srv.provider_phone && <div className="text-gray-600 dark:text-gray-300">Contact: {srv.provider_phone}</div>}
+                    {srv.provider_rating != null && <div className="text-gray-600 dark:text-gray-300">Rating: ⭐ {srv.provider_rating}</div>}
+                    {booking.otp_code && <div className="mt-2 font-bold tracking-widest text-blue-700 dark:text-blue-300">Start OTP: {booking.otp_code}</div>}
+                  </div>
                 ) : (
                   <div className="text-xs text-yellow-600 dark:text-yellow-400 font-medium mt-0.5">Finding provider...</div>
                 )}

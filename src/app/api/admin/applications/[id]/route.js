@@ -26,6 +26,8 @@ export async function PATCH(req, { params }) {
     const updates = {
       status: action === 'approve' ? 'APPROVED' : 'REJECTED',
       available: action === 'approve' ? true : false,
+      provider_status: action === 'approve' ? 'ONLINE' : 'OFFLINE',
+      provider_types: [applicant.provider_type],
       reviewed_at: new Date().toISOString(),
       reviewed_by: decoded.userId,
     };

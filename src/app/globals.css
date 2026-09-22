@@ -103,6 +103,12 @@
   to   { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes slide {
+  0% { transform: translateX(-100%); }
+  50% { transform: translateX(100%); }
+  100% { transform: translateX(220%); }
+}
+
 /* ── Custom Scrollbar ── */
 ::-webkit-scrollbar        { width: 6px; }
 ::-webkit-scrollbar-track  { background: var(--scroll-bg, #f1f5f9); }

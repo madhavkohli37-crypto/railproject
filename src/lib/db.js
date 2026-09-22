@@ -75,6 +75,8 @@ async function initializeCollections(db) {
     }
     await db.collection('reward_transactions').createIndex({ user_id: 1, idempotency_key: 1 }, { unique: true });
     await db.collection('score_transactions').createIndex({ idempotency_key: 1 }, { unique: true });
+    await db.collection('bookings').createIndex({ status: 1, station: 1, 'services.type': 1 });
+    await db.collection('users').createIndex({ role: 1, station: 1, provider_status: 1, provider_types: 1 });
     await seedRewards(db);
 
     // Seed default admin
@@ -128,6 +130,8 @@ async function initializeCollections(db) {
         provider_type: 'PORTER',
         station: 'New Delhi',
         available: true,
+        provider_status: 'ONLINE',
+        provider_types: ['PORTER'],
         rating: 5.0,
         completed_jobs: 0,
         earnings: 0,

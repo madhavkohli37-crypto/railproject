@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getDB, nextId, DEFAULT_GOOD_HUMAN_SCORE } from '@/lib/db';
 import { verifyToken } from '@/lib/auth';
+import { emitBooking, emitRealtime, notifyUsers } from '@/lib/realtime';
 
 export async function POST(req) {
   const decoded = verifyToken(req);
@@ -19,7 +20,7 @@ export async function POST(req) {
     const db = await getDB();
     const passenger = await db.collection('users').findOne({ id: decoded.userId });
     const goodHumanScore = passenger?.good_human_score ?? DEFAULT_GOOD_HUMAN_SCORE;
-    const priority_approved = Boolean(priority_requested) && goodHumanScore >= 700;
+    const priority_approved = Boolean(priority_requested) && goodHumanScore > 700;
     const bookingId = await nextId('bookings');
 
     let total_price = 0;
@@ -33,7 +34,7 @@ export async function POST(req) {
       return {
         ...srv,
         price,
-        status: 'REQUESTED',
+        status: 'SEARCHING',
         provider_id: null,
         provider_name: null,
       };
@@ -47,7 +48,7 @@ export async function POST(req) {
       platform: platform || null,
       scheduled_at: scheduled_at || null,
       services: requestedServices,
-      status: 'REQUESTED',
+      status: 'SEARCHING',
       total_price,
       priority_requested: Boolean(priority_requested),
       priority_approved,
@@ -55,35 +56,17 @@ export async function POST(req) {
       created_at: new Date().toISOString(),
     };
 
-    // Auto-assignment logic
-    for (let i = 0; i < booking.services.length; i++) {
-      const srv = booking.services[i];
-      const provider = await db.collection('users').findOne({
-        role: 'PROVIDER',
-        provider_type: srv.type,
-        station: { $regex: new RegExp(`^${station}$`, 'i') },
-        available: true
-      });
-
-      if (provider) {
-        srv.provider_id = provider.id;
-        srv.provider_name = provider.name;
-        srv.provider_phone = provider.phone;
-        srv.status = 'ASSIGNED';
-
-        await db.collection('users').updateOne(
-          { id: provider.id },
-          { $set: { available: false } }
-        );
-      }
-    }
-
-    const allAssigned = booking.services.every(s => s.status === 'ASSIGNED');
-    const someAssigned = booking.services.some(s => s.status === 'ASSIGNED');
-    if (allAssigned) booking.status = 'ASSIGNED';
-    else if (someAssigned) booking.status = 'PARTIALLY_ASSIGNED';
-
     await db.collection('bookings').insertOne(booking);
+    emitBooking(booking, 'booking:created');
+    const providers = await db.collection('users').find({
+      role: 'PROVIDER',
+      station: { $regex: new RegExp(`^${station}$`, 'i') },
+      provider_status: 'ONLINE',
+      available: true,
+      $or: [{ provider_types: { $in: services.map(s => s.type) } }, { provider_type: { $in: services.map(s => s.type) } }]
+    }, { projection: { id: 1 } }).toArray();
+    for (const provider of providers) emitRealtime('booking:offer', { booking }, [`provider:${provider.id}`]);
+    await notifyUsers([decoded.userId], 'Booking requested', 'Your request is waiting for an available provider.', { booking_id: bookingId });
 
     await db.collection('audit_logs').insertOne({
       action: 'BOOKING_CREATED',
