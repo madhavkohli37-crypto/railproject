@@ -44,20 +44,24 @@ export default function BookingPage() {
 
   useEffect(() => {
     if (!submittedBooking) return undefined;
-    const handleBookingUpdate = async (event) => {
+    const handleBookingUpdate = (event) => {
       const updated = event.detail?.booking;
       if (updated?.id !== submittedBooking.id) return;
-      try {
-        const response = await api.get('/bookings/my');
-        const current = response.data.find(booking => booking.id === submittedBooking.id);
-        setSubmittedBooking(current || updated);
-      } catch {
-        setSubmittedBooking(updated);
-      }
+      setSubmittedBooking(current => ({ ...current, ...updated }));
     };
     const events = ['accepted', 'updated', 'arrived', 'started', 'completed', 'cancelled'];
     events.forEach(event => window.addEventListener(`railassist:booking:${event}`, handleBookingUpdate));
-    return () => events.forEach(event => window.removeEventListener(`railassist:booking:${event}`, handleBookingUpdate));
+    const handleSync = event => {
+      const synced = Array.isArray(event.detail)
+        ? event.detail.find(booking => booking.id === submittedBooking.id)
+        : null;
+      if (synced) setSubmittedBooking(synced);
+    };
+    window.addEventListener('railassist:sync', handleSync);
+    return () => {
+      events.forEach(event => window.removeEventListener(`railassist:booking:${event}`, handleBookingUpdate));
+      window.removeEventListener('railassist:sync', handleSync);
+    };
   }, [submittedBooking]);
 
   const handleChange = (e) => {

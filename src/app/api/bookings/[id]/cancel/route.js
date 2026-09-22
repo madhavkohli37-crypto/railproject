@@ -36,7 +36,10 @@ export async function PATCH(req, { params }) {
     const now = new Date().toISOString();
     const updatedResult = await db.collection('bookings').findOneAndUpdate(
       { id: bookingId, status: { $nin: ['CANCELLED', 'COMPLETED'] } },
-      { $set: { status: 'CANCELLED', cancellation_reason: reason, cancelled_by: 'PASSENGER', updated_at: now } },
+      {
+        $set: { status: 'CANCELLED', cancellation_reason: reason, cancelled_by: 'PASSENGER', updated_at: now, otp_used: true },
+        $unset: { otp_hash: '', otp_code: '' },
+      },
       { returnDocument: 'after' }
     );
     const updated = updatedResult?.value || updatedResult;

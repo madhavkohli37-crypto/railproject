@@ -433,7 +433,7 @@ Build and start production:
 
 ```bash
 npm run build
-npm start
+npm start         # Production server after npm run build
 ```
 
 `npm start` runs `server.js`, which hosts Next.js and the Socket.IO endpoint at

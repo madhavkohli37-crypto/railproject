@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { getDB } from '@/lib/db';
 import { verifyToken } from '@/lib/auth';
-import { emitBooking, notifyUsers } from '@/lib/realtime';
+import { emitBooking, emitRealtime, notifyUsers } from '@/lib/realtime';
 
 const allowed = ['ARRIVED', 'STARTED', 'COMPLETED', 'CANCELLED_BY_PROVIDER'];
 
@@ -28,8 +28,7 @@ export async function PATCH(req, { params }) {
       );
       const updated = started?.value || started;
       if (!updated) return NextResponse.json({ error: 'Invalid or already used OTP' }, { status: 409 });
-      const event = status === 'ARRIVED' ? 'provider:arrived' : status === 'STARTED' ? 'booking:started' : status === 'COMPLETED' ? 'booking:completed' : status === 'CANCELLED_BY_PROVIDER' ? 'booking:cancelled' : 'booking:updated';
-      emitBooking(updated, event);
+      emitBooking(updated, 'booking:started');
       await notifyUsers(
         [updated.user_id, decoded.userId],
         'Service started',
@@ -59,9 +58,14 @@ export async function PATCH(req, { params }) {
       set['services.$.cancellation_reason'] = reason.trim();
       set.status = 'SEARCHING';
     }
+    const update = { $set: set };
+    if (status === 'CANCELLED_BY_PROVIDER' || status === 'COMPLETED') {
+      update.$unset = { otp_hash: '', otp_code: '' };
+      if (status === 'CANCELLED_BY_PROVIDER') update.$set.otp_used = true;
+    }
     const updatedResult = await db.collection('bookings').findOneAndUpdate(
       { id: bookingId, services: { $elemMatch: { provider_id: decoded.userId, ...(status === 'ARRIVED' ? { status: { $in: ['ACCEPTED', 'ARRIVED'] } } : {}) } } },
-      { $set: set },
+      update,
       { returnDocument: 'after' }
     );
     const updated = updatedResult?.value || updatedResult;
@@ -71,7 +75,25 @@ export async function PATCH(req, { params }) {
       if (status === 'COMPLETED') update.$inc = { earnings: service.price || 0, completed_jobs: 1 };
       await db.collection('users').updateOne({ id: decoded.userId }, update);
     }
-    emitBooking(updated);
+    const event = status === 'ARRIVED'
+      ? 'provider:arrived'
+      : status === 'COMPLETED'
+        ? 'booking:completed'
+        : status === 'CANCELLED_BY_PROVIDER'
+          ? 'booking:cancelled'
+          : 'booking:updated';
+    emitBooking(updated, event);
+    if (status === 'CANCELLED_BY_PROVIDER') {
+      const types = [...new Set(updated.services.filter(service => !service.provider_id).map(service => service.type))];
+      const providers = await db.collection('users').find({
+        role: 'PROVIDER',
+        station: { $regex: new RegExp(`^${updated.station}$`, 'i') },
+        provider_status: 'ONLINE',
+        available: true,
+        $or: [{ provider_types: { $in: types } }, { provider_type: { $in: types } }],
+      }, { projection: { id: 1 } }).toArray();
+      for (const provider of providers) emitRealtime('booking:offer', { booking: updated }, [`provider:${provider.id}`]);
+    }
     const title = status === 'CANCELLED_BY_PROVIDER' ? 'Provider cancelled — rematching' : `Service ${status.toLowerCase()}`;
     const message = status === 'CANCELLED_BY_PROVIDER'
       ? `Your provider cancelled: ${reason}. We are looking for another provider.`

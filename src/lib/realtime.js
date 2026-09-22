@@ -31,11 +31,16 @@ export async function notifyUsers(userIds, title, message, data = {}) {
 
 export function emitBooking(booking, event = 'booking:updated') {
   const { otp_hash, otp_code, ...safeBooking } = booking || {};
-  const rooms = [`booking:${booking.id}`, `user:${booking.user_id}`, ...(booking.services || []).flatMap(s => s.provider_id ? [`provider:${s.provider_id}`, `user:${s.provider_id}`] : [])];
-  emitRealtime(event, { booking: safeBooking }, rooms);
+  const userRoom = `user:${booking.user_id}`;
+  const otherRooms = [`booking:${booking.id}`, ...(booking.services || []).flatMap(s => s.provider_id ? [`provider:${s.provider_id}`, `user:${s.provider_id}`] : [])];
+  emitRealtime(event, { booking: safeBooking }, otherRooms);
+  emitRealtime(event, { booking: { ...safeBooking, ...(otp_code ? { otp_code } : {}) } }, [userRoom]);
   const aliases = {
     'booking:created': 'booking:new',
     'booking:updated': null,
   };
-  if (aliases[event]) emitRealtime(aliases[event], { booking: safeBooking }, rooms);
+  if (aliases[event]) {
+    emitRealtime(aliases[event], { booking: safeBooking }, otherRooms);
+    emitRealtime(aliases[event], { booking: { ...safeBooking, ...(otp_code ? { otp_code } : {}) } }, [userRoom]);
+  }
 }
