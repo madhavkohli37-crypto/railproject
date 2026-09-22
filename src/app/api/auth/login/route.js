@@ -58,6 +58,10 @@ export async function POST(req) {
         reward_coins: user.reward_coins ?? 0,
         reward_plan: user.reward_plan || null,
         priority_eligible: (user.good_human_score ?? DEFAULT_GOOD_HUMAN_SCORE) > 700,
+        provider_status: user.provider_status || null,
+        available: user.available !== false,
+        provider_type: user.provider_type || null,
+        provider_types: user.provider_types || [],
       },
     });
   } catch (err) {

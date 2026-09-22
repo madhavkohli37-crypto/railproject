@@ -104,7 +104,10 @@ export default function BookingCard({ booking, onCancel }) {
                     {booking.otp_code && <div className="mt-2 font-bold tracking-widest text-blue-700 dark:text-blue-300">Start OTP: {booking.otp_code}</div>}
                   </div>
                 ) : (
-                  <div className="text-xs text-yellow-600 dark:text-yellow-400 font-medium mt-0.5">Finding provider...</div>
+                  <div className="text-xs text-yellow-600 dark:text-yellow-400 font-medium mt-0.5">
+                    Finding provider...
+                    {srv.declined_count > 0 && ` ${srv.declined_count} provider${srv.declined_count === 1 ? '' : 's'} declined so far.`}
+                  </div>
                 )}
               </div>
               <div className="text-right">

@@ -20,6 +20,7 @@ export default function RealtimeBridge() {
     socket.on('booking:new', forward('booking:new'));
     socket.on('booking:offer', forward('booking:offer'));
     socket.on('booking:accepted', forward('booking:accepted'));
+    socket.on('booking:declined', forward('booking:declined'));
     socket.on('booking:removed', forward('booking:removed'));
     socket.on('booking:cancelled', forward('booking:cancelled'));
     socket.on('provider:arrived', forward('provider:arrived'));

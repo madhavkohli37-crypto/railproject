@@ -22,6 +22,7 @@ This project is an application-level prototype. Real railway deployment must fol
 - Instant porter requests open a live “Finding a porter” animation; accepted requests immediately show the porter’s name, provider ID, contact, rating, and start OTP
 - Provider ONLINE/OFFLINE status and service-type filtering
 - Atomic first-come acceptance with a server-generated single-use OTP
+- Providers can decline an offer; the passenger sees the live number of declined offers while matching continues
 - Arrival, OTP-gated start, completion, and reasoned cancellation/rematching
 - Passenger cancellation immediately removes the request from every matching provider portal
 - Booking history and cancellation

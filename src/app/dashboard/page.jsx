@@ -59,6 +59,7 @@ function PassengerView({ user }) {
     window.addEventListener('railassist:booking:new', refresh);
     window.addEventListener('railassist:booking:offer', refresh);
     window.addEventListener('railassist:booking:accepted', refresh);
+    window.addEventListener('railassist:booking:declined', refresh);
     window.addEventListener('railassist:booking:removed', refresh);
     window.addEventListener('railassist:booking:cancelled', refresh);
     window.addEventListener('railassist:provider:arrived', refresh);
@@ -70,6 +71,7 @@ function PassengerView({ user }) {
       window.removeEventListener('railassist:booking:new', refresh);
       window.removeEventListener('railassist:booking:offer', refresh);
       window.removeEventListener('railassist:booking:accepted', refresh);
+      window.removeEventListener('railassist:booking:declined', refresh);
       window.removeEventListener('railassist:booking:removed', refresh);
       window.removeEventListener('railassist:booking:cancelled', refresh);
       window.removeEventListener('railassist:provider:arrived', refresh);
@@ -269,7 +271,7 @@ function PassengerView({ user }) {
 // ─────────────────────────────────────────────────────────────────────────────
 function ProviderView({ user }) {
   const [jobs, setJobs] = useState([]);
-  const [available, setAvailable] = useState(true);
+  const [available, setAvailable] = useState(user?.provider_status !== 'OFFLINE' && user?.available !== false);
   const [loading, setLoading] = useState(true);
 
   const fetchJobs = async () => {
@@ -346,8 +348,9 @@ function ProviderView({ user }) {
         });
       }
       fetchJobs();
-    } catch {
-      alert('Failed to update status');
+    } catch (err) {
+      const message = err.response?.data?.error || 'Failed to update status';
+      alert(message);
       fetchJobs();
     }
   };
@@ -417,6 +420,14 @@ function ProviderView({ user }) {
                 {job.status === 'SEARCHING' && (
                   <>
                     <button onClick={() => updateStatus(job.booking_id, 'SEARCHING')} className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg font-semibold flex-1 active:scale-95">✅ Accept</button>
+                    <button onClick={async () => {
+                      try {
+                        await api.post(`/provider/job/${job.booking_id}/decline`, { service_type: job.type });
+                        fetchJobs();
+                      } catch (err) {
+                        alert(err.response?.data?.error || 'Failed to decline request');
+                      }
+                    }} className="bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 text-gray-800 dark:text-white px-5 py-2 rounded-lg font-semibold">❌ Decline</button>
                   </>
                 )}
                 {job.status === 'ACCEPTED' && (
