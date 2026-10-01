@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 
-const REASONS = [
+const PASSENGER_REASONS = [
   'No longer required',
   'Taking too long',
   'Unable to reach the other person',
@@ -11,9 +11,20 @@ const REASONS = [
   'Other',
 ];
 
-export default function CancellationDialog({ open, onClose, onConfirm, loading = false }) {
+const EMPLOYEE_REASONS = [
+  'Unable to reach the passenger',
+  'Passenger is not at the agreed meeting point',
+  'Passenger provided incorrect location details',
+  'Service area is inaccessible or unsafe',
+  'Another urgent operational issue',
+  'Personal emergency',
+  'Other',
+];
+
+export default function CancellationDialog({ open, onClose, onConfirm, loading = false, actorRole = 'PASSENGER' }) {
   const [reason, setReason] = useState('');
   const [description, setDescription] = useState('');
+  const reasons = actorRole === 'PROVIDER' ? EMPLOYEE_REASONS : PASSENGER_REASONS;
 
   useEffect(() => {
     if (open) {
@@ -34,11 +45,11 @@ export default function CancellationDialog({ open, onClose, onConfirm, loading =
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true" aria-labelledby="cancel-request-title">
       <form onSubmit={confirm} className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl dark:bg-gray-800">
-        <h2 id="cancel-request-title" className="text-xl font-bold text-gray-900 dark:text-white">Cancel Request?</h2>
-        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Please tell us why you are cancelling.</p>
+        <h2 id="cancel-request-title" className="text-xl font-bold text-gray-900 dark:text-white">Cancel Booking?</h2>
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Select a reason before cancelling. It will be shown to the other participant.</p>
         <fieldset className="mt-5 space-y-3">
           <legend className="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-200">Why are you cancelling? <span className="text-red-500">*</span></legend>
-          {REASONS.map(option => (
+          {reasons.map(option => (
             <label key={option} className="flex cursor-pointer items-center gap-3 text-sm text-gray-700 dark:text-gray-200">
               <input type="radio" name="cancellation-reason" value={option} checked={reason === option} onChange={event => setReason(event.target.value)} />
               {option}

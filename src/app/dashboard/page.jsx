@@ -138,20 +138,20 @@ function PassengerView({ user }) {
 
   return (
     <div className="space-y-8 animate-fade-in">
-      <div className="bg-gradient-to-r from-[#1a3a6b] to-[#2563eb] dark:from-[#0f2347] dark:to-[#1a3a6b] text-white rounded-2xl p-8 relative overflow-hidden">
-        <div className="absolute right-0 top-0 opacity-10 text-[10rem] leading-none">🚂</div>
-        <h1 className="text-3xl font-bold mb-1">Welcome back, {user?.name?.split(' ')[0]}! 👋</h1>
-        <p className="text-blue-200">Here's a summary of your railway activity.</p>
-        <div className="mt-6">
-          <Link href="/book" className="bg-orange-500 hover:bg-orange-600 text-white font-semibold px-6 py-2.5 rounded-lg text-sm shadow-sm">🧳 Request Assistance</Link>
-          <Link href="/report" className="ml-3 border border-white/50 hover:bg-white/10 text-white font-semibold px-6 py-2.5 rounded-lg text-sm">📣 Report Activity</Link>
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#1a3a6b] to-[#2563eb] p-4 text-white dark:from-[#0f2347] dark:to-[#1a3a6b] sm:p-8">
+        <div className="pointer-events-none absolute right-0 top-0 text-[6rem] leading-none opacity-10 sm:text-[10rem]">🚂</div>
+        <h1 className="relative text-2xl font-bold leading-tight sm:text-3xl">Welcome back, {user?.name?.split(' ')[0]}! 👋</h1>
+        <p className="relative mt-2 text-sm text-blue-200 sm:text-base">Here's a summary of your railway activity.</p>
+        <div className="relative mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+          <Link href="/book" className="inline-flex w-full items-center justify-center rounded-lg bg-orange-500 px-5 py-3 text-sm font-semibold text-white shadow-sm hover:bg-orange-600 sm:w-auto">🧳 Request Assistance</Link>
+          <Link href="/report" className="inline-flex w-full items-center justify-center rounded-lg border border-white/50 px-5 py-3 text-sm font-semibold text-white hover:bg-white/10 sm:w-auto">📣 Report Activity</Link>
         </div>
       </div>
 
       {cancelMsg && <div className="bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-400 px-4 py-3 rounded-lg text-sm">✅ {cancelMsg}</div>}
       {error && <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded-lg text-sm">⚠️ {error}</div>}
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-5">
         {[
           { label: 'Total Bookings', value: bookings.length, icon: '📋', color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-50 dark:bg-blue-900/30' },
           { label: 'Active', value: activeBookings.length, icon: '✅', color: 'text-green-600 dark:text-green-400', bg: 'bg-green-50 dark:bg-green-900/30' },
@@ -497,7 +497,7 @@ function ProviderView({ user }) {
           ))}
         </div>
       )}
-      <CancellationDialog open={Boolean(cancelJob)} onClose={() => setCancelJob(null)} onConfirm={confirmProviderCancel} loading={cancelLoading} />
+      <CancellationDialog open={Boolean(cancelJob)} onClose={() => setCancelJob(null)} onConfirm={confirmProviderCancel} loading={cancelLoading} actorRole="PROVIDER" />
     </div>
   );
 }
