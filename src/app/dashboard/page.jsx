@@ -45,14 +45,9 @@ function RewardsSummary() {
 // ─────────────────────────────────────────────────────────────────────────────
 function PassengerView({ user }) {
   const [bookings, setBookings] = useState([]);
-  const [complaints, setComplaints] = useState([]);
-  const [notifications, setNotifications] = useState([]);
-  const [complaintsLoading, setComplaintsLoading] = useState(true);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [cancelMsg, setCancelMsg] = useState('');
-  const [appealReasons, setAppealReasons] = useState({});
-  const [appealLoading, setAppealLoading] = useState({});
   const [socketState, setSocketState] = useState('connecting');
 
   const fetchBookings = async () => {
@@ -119,21 +114,6 @@ function PassengerView({ user }) {
     };
   }, []);
 
-  useEffect(() => {
-    api.get('/complaints')
-      .then(res => setComplaints(res.data))
-      .catch(() => setError('Failed to load complaint history'))
-      .finally(() => setComplaintsLoading(false));
-  }, []);
-
-  useEffect(() => {
-    const fetchNotifications = () => api.get('/notifications').then(res => setNotifications(res.data)).catch(() => {});
-    fetchNotifications();
-    const refreshNotifications = () => fetchNotifications();
-    window.addEventListener('railassist:notification:new', refreshNotifications);
-    return () => window.removeEventListener('railassist:notification:new', refreshNotifications);
-  }, []);
-
   const handleCancel = async (bookingId) => {
     if (!window.confirm('Are you sure you want to cancel this booking?')) return;
     const cancellation = chooseCancellation();
@@ -145,18 +125,6 @@ function PassengerView({ user }) {
       setTimeout(() => setCancelMsg(''), 4000);
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to cancel booking');
-    }
-  };
-
-  const submitAppeal = async (complaint) => {
-    setAppealLoading(prev => ({ ...prev, [complaint.id]: true }));
-    try {
-      await api.post(`/complaints/${complaint.id}/appeal`, { reason: appealReasons[complaint.id] || '' });
-      setComplaints(items => items.map(item => item.id === complaint.id ? { ...item, appeal: { status: 'PENDING' } } : item));
-    } catch (err) {
-      setError(err.response?.data?.error || 'Unable to submit appeal');
-    } finally {
-      setAppealLoading(prev => ({ ...prev, [complaint.id]: false }));
     }
   };
 
@@ -215,92 +183,25 @@ function PassengerView({ user }) {
       <RewardsSummary />
 
       <div>
-        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-5">🔔 Account Notifications</h2>
-        {notifications.length === 0 ? (
-          <div className="card text-sm text-gray-500 dark:text-gray-400">No account-impact notifications yet.</div>
-        ) : (
-          <div className="space-y-3">{notifications.map(notification => (
-            <div key={notification.id} className="card border-l-4 border-blue-500">
-              <div className="flex justify-between gap-3"><h3 className="font-bold dark:text-white">{notification.title}</h3><span className="text-xs text-gray-500">{new Date(notification.created_at).toLocaleString('en-IN')}</span></div>
-              <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">{notification.message}</p>
-            </div>
-          ))}</div>
-        )}
-      </div>
-
-      <div>
         <div className="flex items-center justify-between mb-5">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white">📣 My Complaint Logs</h2>
-          <Link href="/report" className="text-sm text-orange-500 hover:text-orange-600 font-semibold">+ New Report</Link>
-        </div>
-        {complaintsLoading ? (
-          <div className="card animate-pulse h-32" />
-        ) : complaints.length === 0 ? (
-          <div className="card text-center py-8">
-            <p className="text-gray-500 dark:text-gray-400 mb-4">You have not submitted any activity reports.</p>
-            <Link href="/report" className="btn-outline text-sm">Report an Activity</Link>
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white">🧳 Active Bookings</h2>
+          <div className="flex gap-3">
+            <Link href="/bookings" className="text-sm text-blue-600 hover:text-blue-700 font-semibold">Booking History</Link>
+            <Link href="/book" className="text-sm text-orange-500 hover:text-orange-600 font-semibold">+ New Request</Link>
           </div>
-        ) : (
-          <div className="space-y-4">
-            {complaints.map(complaint => (
-              <div key={complaint.id} className="card">
-                <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
-                  <div>
-                    <h3 className="font-bold text-gray-900 dark:text-white">Report #{complaint.id} · {complaint.category}</h3>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      {complaint.station} · {new Date(complaint.created_at).toLocaleString('en-IN')}
-                    </p>
-                  </div>
-                  <span className="badge-info">{complaint.status.replace(/_/g, ' ')}</span>
-                </div>
-                <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{complaint.description}</p>
-                <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-3 text-xs text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3">
-                  <div><span className="block text-gray-400">Occurred</span>{complaint.occurred_at ? new Date(complaint.occurred_at).toLocaleString('en-IN') : '—'}</div>
-                  <div><span className="block text-gray-400">Train</span>{complaint.train_number || '—'}</div>
-                  <div><span className="block text-gray-400">Platform / coach</span>{complaint.platform || '—'}</div>
-                  <div><span className="block text-gray-400">Location</span>{complaint.station}</div>
-                </div>
-                {complaint.images?.length > 0 && <div className="flex gap-2 flex-wrap mt-3">{complaint.images.map((image, index) => <a key={index} href={image.data} target="_blank" rel="noreferrer"><img src={image.data} alt={`Complaint evidence ${index + 1}`} className="w-16 h-16 object-cover rounded border" /></a>)}</div>}
-                {complaint.resolution && (
-                  <div className="mt-3 rounded-lg bg-gray-50 dark:bg-gray-700/50 p-3 text-sm text-gray-600 dark:text-gray-300">
-                    <strong>{complaint.resolution.accused_user_id === user?.id ? 'Decision against your account:' : 'Review outcome:'}</strong> {complaint.resolution.action.replace(/_/g, ' ')}
-                    {complaint.resolution.accused_user_id === user?.id && <div className="mt-1">Fine: ₹{complaint.resolution.fine_amount || 0} · Good Human Score penalty: {complaint.resolution.score_penalty || 0}</div>}
-                    {complaint.resolution.notes && <div className="mt-1"><strong>Manager explanation:</strong> {complaint.resolution.notes}</div>}
-                    {complaint.resolution.accused_user_id === user?.id && complaint.resolution.accused_message && <div className="mt-1"><strong>Message from complaint manager:</strong> {complaint.resolution.accused_message}</div>}
-                    {complaint.reporter_id === user?.id && complaint.resolution.reporter_message && <div className="mt-1"><strong>Message from complaint manager:</strong> {complaint.resolution.reporter_message}</div>}
-                    {complaint.appeal && <div className="mt-1"><strong>Appeal:</strong> {complaint.appeal.status}{complaint.appeal.review_notes ? ` — ${complaint.appeal.review_notes}` : ''}</div>}
-                  </div>
-                )}
-                {complaint.resolution?.accused_user_id === user?.id && complaint.status === 'UPHELD' && complaint.appeal?.status !== 'PENDING' && (
-                  <div className="mt-3 border-t pt-3">
-                    <p className="text-sm font-semibold dark:text-white mb-2">Object to this decision</p>
-                    <textarea className="input-field w-full" rows="2" minLength="10" placeholder="Explain why you believe this decision should be reviewed (at least 10 characters)." value={appealReasons[complaint.id] || ''} onChange={e => setAppealReasons(prev => ({ ...prev, [complaint.id]: e.target.value }))} />
-                    <button disabled={appealLoading[complaint.id]} onClick={() => submitAppeal(complaint)} className="btn-outline mt-2">{appealLoading[complaint.id] ? 'Submitting...' : 'Submit appeal for re-review'}</button>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div>
-        <div className="flex items-center justify-between mb-5">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white">🧳 My Bookings</h2>
-          <Link href="/book" className="text-sm text-orange-500 hover:text-orange-600 font-semibold">+ New Request</Link>
         </div>
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">{[1,2].map(i => <div key={i} className="card animate-pulse h-48" />)}</div>
-        ) : bookings.length === 0 ? (
+        ) : activeBookings.length === 0 ? (
           <div className="card text-center py-16">
             <div className="text-6xl mb-4">🧳</div>
-            <h3 className="text-xl font-bold dark:text-white mb-2">No bookings yet.</h3>
-            <p className="text-gray-500 dark:text-gray-400 mb-6">Book your first provider for your upcoming journey!</p>
+            <h3 className="text-xl font-bold dark:text-white mb-2">No active bookings.</h3>
+            <p className="text-gray-500 dark:text-gray-400 mb-6">Your completed and cancelled bookings are in Booking History.</p>
             <Link href="/book" className="btn-primary inline-block">Request Assistance</Link>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            {bookings.map(booking => <BookingCard key={booking.id} booking={booking} onCancel={handleCancel} />)}
+            {activeBookings.map(booking => <BookingCard key={booking.id} booking={booking} onCancel={handleCancel} />)}
           </div>
         )}
       </div>

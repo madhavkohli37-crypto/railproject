@@ -266,6 +266,13 @@ Separate passenger sections are available for:
 
 The custom server must be used for local development (`npm.cmd run dev`) so the authenticated Socket.IO endpoint is available.
 
+When the Next.js API is deployed on Vercel and `server.js` is deployed separately, configure these private variables on both sides of the realtime deployment:
+
+- `REALTIME_SERVER_URL` on Vercel: the Railway/Render server origin.
+- `REALTIME_INTERNAL_SECRET` on Vercel and Railway: the same long random value.
+
+The API uses this authenticated relay to publish booking events to the persistent Socket.IO process. `NEXT_PUBLIC_SOCKET_URL` remains the browser-facing realtime origin.
+
 ## 🆔 User identity and privacy
 
 Every account has a numeric database ID and a display ID formatted as `U-<id>`, such as `U-42`.
