@@ -45,10 +45,10 @@ export default function BookingPage() {
   }, []);
 
   useEffect(() => {
-    const handleBookingUpdate = (event) => {
+    const handleBookingUpdate = event => {
       const updated = event.detail?.booking;
       if (updated?.id !== activeBooking?.id) return;
-      setActiveBooking(current => ({ ...current, ...updated }));
+      setActiveBooking(current => ({ ...(current || {}), ...updated }));
     };
     const events = ['accepted', 'updated', 'arrived', 'started', 'completed', 'cancelled'];
     events.forEach(event => window.addEventListener(`railassist:booking:${event}`, handleBookingUpdate));

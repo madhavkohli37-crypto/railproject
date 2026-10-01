@@ -172,7 +172,7 @@ function PassengerView({ user }) {
 
       <RewardsSummary />
 
-      <div>
+      <div className="hidden">
         <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-5">🔔 Account Notifications</h2>
         {notifications.length === 0 ? (
           <div className="card text-sm text-gray-500 dark:text-gray-400">No account-impact notifications yet.</div>
@@ -186,7 +186,7 @@ function PassengerView({ user }) {
         )}
       </div>
 
-      <div>
+      <div className="hidden">
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-xl font-bold text-gray-900 dark:text-white">📣 My Complaint Logs</h2>
           <Link href="/report" className="text-sm text-orange-500 hover:text-orange-600 font-semibold">+ New Report</Link>
@@ -244,21 +244,24 @@ function PassengerView({ user }) {
 
       <div>
         <div className="flex items-center justify-between mb-5">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white">🧳 My Bookings</h2>
-          <Link href="/book" className="text-sm text-orange-500 hover:text-orange-600 font-semibold">+ New Request</Link>
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white">🧳 Active Assistance</h2>
+          <div className="flex gap-3">
+            <Link href="/bookings" className="text-sm text-blue-600 hover:text-blue-700 font-semibold">Booking History</Link>
+            <Link href="/book" className="text-sm text-orange-500 hover:text-orange-600 font-semibold">+ New Request</Link>
+          </div>
         </div>
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">{[1,2].map(i => <div key={i} className="card animate-pulse h-48" />)}</div>
-        ) : bookings.length === 0 ? (
+        ) : activeBookings.length === 0 ? (
           <div className="card text-center py-16">
             <div className="text-6xl mb-4">🧳</div>
-            <h3 className="text-xl font-bold dark:text-white mb-2">No bookings yet.</h3>
-            <p className="text-gray-500 dark:text-gray-400 mb-6">Book your first provider for your upcoming journey!</p>
+            <h3 className="text-xl font-bold dark:text-white mb-2">No active bookings.</h3>
+            <p className="text-gray-500 dark:text-gray-400 mb-6">Completed and cancelled bookings are in Booking History.</p>
             <Link href="/book" className="btn-primary inline-block">Request Assistance</Link>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            {bookings.map(booking => <BookingCard key={booking.id} booking={booking} onCancel={handleCancel} />)}
+            {activeBookings.map(booking => <BookingCard key={booking.id} booking={booking} onCancel={handleCancel} />)}
           </div>
         )}
       </div>

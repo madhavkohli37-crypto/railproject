@@ -91,9 +91,7 @@ export default function RootLayout({ children }) {
             <BookingProvider>
               <RealtimeBridge />
               <Navbar />
-              <main className="flex-1">
-                {children}
-              </main>
+              <main className="flex-1">{children}</main>
             </BookingProvider>
 
 

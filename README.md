@@ -26,6 +26,7 @@ This project is an application-level prototype. Real railway deployment must fol
 - Arrival, OTP-gated start, completion, and reasoned cancellation/rematching
 - Passenger cancellation immediately removes the request from every matching provider portal
 - Booking history and cancellation
+- Dedicated navigation for active assistance, booking history, notifications, complaint history, and account activity
 - Provider/job status tracking
 - Passenger profile and Good Human Score display
 - Priority booking eligibility
@@ -443,6 +444,22 @@ are transient. Provider acceptance uses a MongoDB conditional update, so only
 one simultaneous provider can win. Serverless deployments that cannot keep a
 long-lived Node process should run Socket.IO separately; HTTP booking APIs
 remain available without realtime delivery.
+
+### Production realtime deployment
+
+For Vercel + Railway deployments, Railway must run `node server.js` as the
+persistent Socket.IO process. Set `NEXT_PUBLIC_SOCKET_URL` on Vercel to the
+Railway origin (without `/api/socket.io`). Set `REALTIME_SERVER_URL` on Vercel
+to that same Railway origin and configure the same private random
+`REALTIME_INTERNAL_SECRET` on both Vercel and Railway. Vercel API routes use
+the authenticated `/api/realtime/publish` relay to deliver booking events to
+Railway; MongoDB remains the source of truth. Redeploy Railway first, then
+Vercel, after changing these variables.
+
+Account notifications, complaint history, booking history, and audit activity
+are separate routes (`/notifications`, `/complaints`, `/bookings`, and
+`/activity`) rather than dashboard feeds. The dashboard shows only active
+assistance requests.
 
 The first database connection creates the required collections and seeds the configured development accounts. See [`admin.md`](./admin.md) for credential and account-management details.
 

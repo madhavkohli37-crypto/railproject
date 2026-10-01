@@ -9,13 +9,20 @@ export default function RealtimeBridge() {
   useEffect(() => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
     if (!user || !token) return undefined;
-    const socket = io(typeof window !== 'undefined' ? window.location.origin : undefined, {
+    const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || window.location.origin;
+    const socket = io(socketUrl, {
       path: '/api/socket.io',
       auth: { token },
+      transports: ['websocket', 'polling'],
       reconnection: true,
       reconnectionAttempts: Infinity,
     });
-    const forward = event => payload => window.dispatchEvent(new CustomEvent(`railassist:${event}`, { detail: payload }));
+    const forward = event => payload => {
+      if (process.env.NODE_ENV !== 'production') console.debug(`[realtime] received ${event}`);
+      window.dispatchEvent(new CustomEvent(`railassist:${event}`, { detail: payload }));
+    };
+    socket.on('connect_error', error => window.dispatchEvent(new CustomEvent('railassist:socket-error', { detail: { message: error.message } })));
+    socket.on('disconnect', reason => window.dispatchEvent(new CustomEvent('railassist:disconnected', { detail: { reason } })));
     socket.on('booking:created', forward('booking:created'));
     socket.on('booking:new', forward('booking:new'));
     socket.on('booking:offer', forward('booking:offer'));

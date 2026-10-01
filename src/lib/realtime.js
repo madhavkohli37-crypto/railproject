@@ -2,8 +2,21 @@ import { getDB } from '@/lib/db';
 
 export function emitRealtime(event, payload, rooms = []) {
   const io = global._railassistSocketIO;
-  if (!io) return;
-  for (const room of rooms) io.to(room).emit(event, payload);
+  if (io) {
+    for (const room of rooms) io.to(room).emit(event, payload);
+    return;
+  }
+  const relayUrl = process.env.REALTIME_SERVER_URL || process.env.NEXT_PUBLIC_SOCKET_URL;
+  const relaySecret = process.env.REALTIME_INTERNAL_SECRET;
+  if (!relayUrl || !relaySecret) {
+    console.warn(`[realtime] no Socket.IO server or relay configured for ${event}`);
+    return;
+  }
+  void fetch(`${relayUrl.replace(/\/$/, '')}/api/realtime/publish`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${relaySecret}` },
+    body: JSON.stringify({ event, payload, rooms }),
+  }).catch(error => console.error(`[realtime] relay failed for ${event}:`, error.message));
 }
 
 export async function notifyUsers(userIds, title, message, data = {}) {
