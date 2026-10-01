@@ -347,7 +347,6 @@ function ProviderView({ user }) {
 
   useEffect(() => {
     fetchJobs();
-    const refresh = () => fetchJobs();
     const applyOffer = event => {
       const booking = event.detail?.booking;
       if (!booking?.id) return;
@@ -368,6 +367,30 @@ function ProviderView({ user }) {
         ...offeredJobs,
       ]);
     };
+    const applyBookingState = event => {
+      const booking = event.detail?.booking;
+      if (!booking?.id) return;
+      const assignedJobs = booking.services
+        .filter(service => service.provider_id === user?.id)
+        .map(service => ({
+          ...service,
+          booking_id: booking.id,
+          station: booking.station,
+          train_number: booking.train_number,
+          platform: booking.platform,
+          scheduled_at: booking.scheduled_at,
+          live: true,
+        }));
+      setJobs(current => [
+        ...current.filter(job => job.booking_id !== booking.id),
+        ...assignedJobs,
+      ]);
+    };
+    const removeBooking = event => {
+      const bookingId = event.detail?.booking_id;
+      if (!bookingId) return;
+      setJobs(current => current.filter(job => job.booking_id !== bookingId));
+    };
     const applyCancellation = event => {
       const booking = event.detail?.booking;
       if (!booking?.id) return;
@@ -383,26 +406,26 @@ function ProviderView({ user }) {
         : job));
     };
     window.addEventListener('railassist:booking:offer', applyOffer);
-    window.addEventListener('railassist:booking:accepted', refresh);
-    window.addEventListener('railassist:booking:removed', refresh);
+    window.addEventListener('railassist:booking:accepted', applyBookingState);
+    window.addEventListener('railassist:booking:removed', removeBooking);
     window.addEventListener('railassist:booking:cancelled', applyCancellation);
-    window.addEventListener('railassist:provider:arrived', refresh);
-    window.addEventListener('railassist:booking:started', refresh);
-    window.addEventListener('railassist:booking:completed', refresh);
-    window.addEventListener('railassist:booking:updated', refresh);
-    window.addEventListener('railassist:sync', refresh);
+    window.addEventListener('railassist:provider:arrived', applyBookingState);
+    window.addEventListener('railassist:booking:started', applyBookingState);
+    window.addEventListener('railassist:booking:completed', applyBookingState);
+    window.addEventListener('railassist:booking:updated', applyBookingState);
+    window.addEventListener('railassist:sync', fetchJobs);
     return () => {
       window.removeEventListener('railassist:booking:offer', applyOffer);
-      window.removeEventListener('railassist:booking:accepted', refresh);
-      window.removeEventListener('railassist:booking:removed', refresh);
+      window.removeEventListener('railassist:booking:accepted', applyBookingState);
+      window.removeEventListener('railassist:booking:removed', removeBooking);
       window.removeEventListener('railassist:booking:cancelled', applyCancellation);
-      window.removeEventListener('railassist:provider:arrived', refresh);
-      window.removeEventListener('railassist:booking:started', refresh);
-      window.removeEventListener('railassist:booking:completed', refresh);
-      window.removeEventListener('railassist:booking:updated', refresh);
-      window.removeEventListener('railassist:sync', refresh);
+      window.removeEventListener('railassist:provider:arrived', applyBookingState);
+      window.removeEventListener('railassist:booking:started', applyBookingState);
+      window.removeEventListener('railassist:booking:completed', applyBookingState);
+      window.removeEventListener('railassist:booking:updated', applyBookingState);
+      window.removeEventListener('railassist:sync', fetchJobs);
     };
-  }, []);
+  }, [user?.id]);
 
   const toggleAvailability = async () => {
     try {
@@ -495,7 +518,7 @@ function ProviderView({ user }) {
               <div className="flex space-x-3 border-t border-gray-100 dark:border-gray-700 pt-4">
                 {job.status === 'CANCELLED' && (
                   <div className="w-full rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-900/20 dark:text-red-300">
-                    <strong>Request cancelled by passenger</strong>
+                    <strong>Request cancelled {job.cancelled_by === 'PROVIDER' ? 'by provider' : 'by passenger'}</strong>
                     {job.cancellation_description && <div>Reason: {job.cancellation_description}</div>}
                   </div>
                 )}

@@ -6,7 +6,12 @@ export function emitRealtime(event, payload, rooms = []) {
     console.warn(`[realtime] Socket.IO unavailable for ${event}`);
     return;
   }
-  for (const room of rooms) io.to(room).emit(event, payload);
+  for (const room of rooms) {
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`[realtime] emitting ${event} -> ${room}`);
+    }
+    io.to(room).emit(event, payload);
+  }
 }
 
 export async function notifyUsers(userIds, title, message, data = {}) {

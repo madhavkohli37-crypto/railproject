@@ -17,7 +17,12 @@ export default function RealtimeBridge() {
       reconnection: true,
       reconnectionAttempts: Infinity,
     });
-    const forward = event => payload => window.dispatchEvent(new CustomEvent(`railassist:${event}`, { detail: payload }));
+    const forward = event => payload => {
+      if (process.env.NODE_ENV !== 'production') {
+        console.debug(`[realtime] received ${event}`);
+      }
+      window.dispatchEvent(new CustomEvent(`railassist:${event}`, { detail: payload }));
+    };
     socket.on('connect_error', error => {
       window.dispatchEvent(new CustomEvent('railassist:socket-error', { detail: { message: error.message } }));
     });
