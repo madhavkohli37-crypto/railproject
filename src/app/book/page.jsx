@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useBooking } from '@/context/BookingContext';
 import api from '@/lib/axiosInstance';
-import BookingCard from '@/components/BookingCard';
 
 export default function BookingPage() {
   const router = useRouter();
@@ -103,24 +102,6 @@ export default function BookingPage() {
     }
   };
 
-  const handleCancel = async (bookingId) => {
-    if (!window.confirm('Are you sure you want to cancel this booking?')) return;
-    try {
-      const response = await api.patch(`/bookings/${bookingId}/cancel`, {
-        reason: 'Cancelled by passenger from booking page',
-      });
-      setActiveBooking(current => ({
-        ...current,
-        ...(response.data.booking || {}),
-        status: 'CANCELLED',
-        cancellation_reason: 'Cancelled by passenger from booking page',
-      }));
-      setSuccess('Booking cancelled successfully.');
-    } catch (err) {
-      setError(err.response?.data?.error || 'Failed to cancel booking');
-    }
-  };
-
   if (authLoading) {
     return (
       <div className="flex justify-center items-center min-h-[calc(100vh-64px)]">
@@ -143,18 +124,6 @@ export default function BookingPage() {
         <div className="card p-8 shadow-xl">
           {error && <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 p-4 rounded-xl mb-6">⚠️ {error}</div>}
           {success && <div className="bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-400 p-4 rounded-xl mb-6">🎉 {success}</div>}
-
-          {activeBooking && (
-            <div className="mb-6">
-              <p className="text-sm font-semibold text-blue-700 dark:text-blue-300 mb-2">Current active booking</p>
-              <BookingCard booking={activeBooking} onCancel={handleCancel} />
-              <div className="mt-4 flex justify-center">
-                <button type="button" onClick={() => router.push('/dashboard')} className="btn-outline">
-                  View all bookings
-                </button>
-              </div>
-            </div>
-          )}
 
           <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
             <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Start a new assistance request</h2>
