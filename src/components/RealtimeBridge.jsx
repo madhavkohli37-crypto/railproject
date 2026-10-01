@@ -9,7 +9,18 @@ export default function RealtimeBridge() {
   useEffect(() => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
     if (!user || !token) return undefined;
-    const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || window.location.origin;
+    const configuredUrl = process.env.NEXT_PUBLIC_SOCKET_URL || window.location.origin;
+    let socketUrl = configuredUrl;
+    try {
+      const normalizedConfiguredUrl = /^[a-z][a-z\d+.-]*:\/\//i.test(configuredUrl) ? configuredUrl : `https://${configuredUrl}`;
+      const url = new URL(normalizedConfiguredUrl, window.location.origin);
+      url.pathname = '';
+      url.search = '';
+      url.hash = '';
+      socketUrl = url.toString().replace(/\/$/, '');
+    } catch {
+      socketUrl = configuredUrl.replace(/\/api\/socket\.io\/?$/, '').replace(/\/$/, '');
+    }
     const socket = io(socketUrl, {
       path: '/api/socket.io',
       auth: { token },

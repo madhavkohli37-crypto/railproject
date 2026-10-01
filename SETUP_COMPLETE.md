@@ -97,8 +97,9 @@ Passenger reports may include up to five image files smaller than 1.5 MB each. T
 For Vercel:
 
 1. Import the repository as a Next.js project.
-2. Configure `MONGODB_URI`, `JWT_SECRET`, and optionally `NEXT_PUBLIC_SITE_URL`.
-3. Deploy using the default Next.js build settings.
+2. Configure `MONGODB_URI`, `JWT_SECRET`, `NEXT_PUBLIC_SOCKET_URL`, `REALTIME_SERVER_URL`, and `REALTIME_INTERNAL_SECRET`.
+3. Configure `MONGODB_URI`, `JWT_SECRET`, `NODE_ENV=production`, and the same `REALTIME_INTERNAL_SECRET` on Railway.
+4. Deploy Railway with `node server.js`, copy its public HTTPS origin into the two Vercel realtime URL variables, redeploy Railway first, then Vercel.
 
 MongoDB must allow connections from the deployment environment. Keep environment variables out of source control and rotate any development credentials before production use.
 

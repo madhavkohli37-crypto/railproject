@@ -451,8 +451,9 @@ remain available without realtime delivery.
 
 For Vercel + Railway deployments, Railway must run `node server.js` as the
 persistent Socket.IO process. Set `NEXT_PUBLIC_SOCKET_URL` on Vercel to the
-Railway origin (without `/api/socket.io`). Set `REALTIME_SERVER_URL` on Vercel
-to that same Railway origin and configure the same private random
+Railway origin (for example `https://your-service.up.railway.app`; the client
+also normalizes an accidentally supplied `/api/socket.io` suffix). Set
+`REALTIME_SERVER_URL` on Vercel to that same Railway origin and configure the same private random
 `REALTIME_INTERNAL_SECRET` on both Vercel and Railway. Vercel API routes use
 the authenticated `/api/realtime/publish` relay to deliver booking events to
 Railway; MongoDB remains the source of truth. Redeploy Railway first, then

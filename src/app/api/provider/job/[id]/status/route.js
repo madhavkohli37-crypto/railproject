@@ -57,6 +57,8 @@ export async function PATCH(req, { params }) {
       set['services.$.provider_name'] = null;
       set['services.$.provider_phone'] = null;
       set['services.$.cancellation_reason'] = reason.trim();
+      set.cancellation_reason = reason.trim();
+      set.cancelled_by = 'PROVIDER';
       set.status = 'SEARCHING';
     }
     const updatedResult = await db.collection('bookings').findOneAndUpdate(

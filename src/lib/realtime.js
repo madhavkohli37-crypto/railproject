@@ -6,17 +6,31 @@ export function emitRealtime(event, payload, rooms = []) {
     for (const room of rooms) io.to(room).emit(event, payload);
     return;
   }
-  const relayUrl = process.env.REALTIME_SERVER_URL || process.env.NEXT_PUBLIC_SOCKET_URL;
+  const relayUrl = normalizeRealtimeOrigin(process.env.REALTIME_SERVER_URL || process.env.NEXT_PUBLIC_SOCKET_URL);
   const relaySecret = process.env.REALTIME_INTERNAL_SECRET;
   if (!relayUrl || !relaySecret) {
     console.warn(`[realtime] no Socket.IO server or relay configured for ${event}`);
     return;
   }
-  void fetch(`${relayUrl.replace(/\/$/, '')}/api/realtime/publish`, {
+  void fetch(`${relayUrl}/api/realtime/publish`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${relaySecret}` },
     body: JSON.stringify({ event, payload, rooms }),
   }).catch(error => console.error(`[realtime] relay failed for ${event}:`, error.message));
+}
+
+function normalizeRealtimeOrigin(value) {
+  if (!value) return '';
+  const candidate = /^[a-z][a-z\d+.-]*:\/\//i.test(value) ? value : `https://${value}`;
+  try {
+    const url = new URL(candidate);
+    url.pathname = '';
+    url.search = '';
+    url.hash = '';
+    return url.toString().replace(/\/$/, '');
+  } catch {
+    return candidate.replace(/\/api\/socket\.io\/?$/, '').replace(/\/$/, '');
+  }
 }
 
 export async function notifyUsers(userIds, title, message, data = {}) {

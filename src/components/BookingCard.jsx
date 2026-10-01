@@ -134,6 +134,12 @@ export default function BookingCard({ booking, onCancel }) {
           </button>
         )}
       </div>
+      {booking.cancellation_reason && (
+        <div className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-900/20 dark:text-red-200">
+          <span className="font-semibold">Cancellation reason:</span> {booking.cancellation_reason}
+          {booking.cancelled_by && <span className="ml-1 text-xs uppercase opacity-75">({booking.cancelled_by.toLowerCase()})</span>}
+        </div>
+      )}
     </div>
   );
 }
