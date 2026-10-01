@@ -237,7 +237,9 @@ The current application enforces the `>700` priority threshold. Benefits beyond 
 
 ## 🔔 Notifications
 
-Notifications are created for relevant complaint outcomes and account impacts, including:
+Notifications are reserved for important user-facing alerts and are separate from booking history and account activity. The authenticated notification center supports Booking, Complaints, Account, and System filters, unread indicators, individual read actions, and mark-all-as-read.
+
+Important notifications include:
 
 - Fine applied
 - Good Human Score reduction or reward
@@ -249,7 +251,20 @@ Notifications are created for relevant complaint outcomes and account impacts, i
 - Appeal acceptance or denial
 - Private manager messages
 
-Passengers can view notifications in the dashboard. Notifications are scoped to the authenticated passenger.
+Notifications are scoped to the authenticated user and are delivered live through Socket.IO.
+
+## 🧭 Active bookings and history
+
+The active booking experience is backed by a shared booking context. It stays available at `/book` while a passenger is searching or receiving service and applies Socket.IO events directly to the visible card. Reconnect synchronization restores the latest authorized state without polling or a page refresh.
+
+Separate passenger sections are available for:
+
+- `/bookings` — Booking History, containing only service bookings.
+- `/complaints` — Complaint History and complaint status.
+- `/activity` — Account Activity from account audit events.
+- `/notifications` — Important alerts only.
+
+The custom server must be used for local development (`npm.cmd run dev`) so the authenticated Socket.IO endpoint is available.
 
 ## 🆔 User identity and privacy
 
