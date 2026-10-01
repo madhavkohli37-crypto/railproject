@@ -41,6 +41,7 @@ function PassengerView({ user }) {
   const [cancelMsg, setCancelMsg] = useState('');
   const [appealReasons, setAppealReasons] = useState({});
   const [appealLoading, setAppealLoading] = useState({});
+  const [socketState, setSocketState] = useState('connecting');
 
   const fetchBookings = async () => {
     try {
@@ -89,6 +90,20 @@ function PassengerView({ user }) {
       window.removeEventListener('railassist:booking:completed', applyBookingEvent);
       window.removeEventListener('railassist:booking:updated', applyBookingEvent);
       window.removeEventListener('railassist:sync', refresh);
+    };
+  }, []);
+
+  useEffect(() => {
+    const connected = () => setSocketState('connected');
+    const disconnected = () => setSocketState('disconnected');
+    const failed = () => setSocketState('disconnected');
+    window.addEventListener('railassist:connected', connected);
+    window.addEventListener('railassist:disconnected', disconnected);
+    window.addEventListener('railassist:socket-error', failed);
+    return () => {
+      window.removeEventListener('railassist:connected', connected);
+      window.removeEventListener('railassist:disconnected', disconnected);
+      window.removeEventListener('railassist:socket-error', failed);
     };
   }, []);
 
@@ -151,6 +166,9 @@ function PassengerView({ user }) {
 
       {cancelMsg && <div className="bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-400 px-4 py-3 rounded-lg text-sm">✅ {cancelMsg}</div>}
       {error && <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded-lg text-sm">⚠️ {error}</div>}
+      <div className={`text-xs ${socketState === 'connected' ? 'text-green-600' : 'text-amber-600'}`}>
+        {socketState === 'connected' ? '● Live updates connected' : '○ Reconnecting to live updates…'}
+      </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
         {[

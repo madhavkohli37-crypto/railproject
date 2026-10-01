@@ -2,7 +2,10 @@ import { getDB } from '@/lib/db';
 
 export function emitRealtime(event, payload, rooms = []) {
   const io = global._railassistSocketIO;
-  if (!io) return;
+  if (!io) {
+    console.warn(`[realtime] Socket.IO unavailable for ${event}`);
+    return;
+  }
   for (const room of rooms) io.to(room).emit(event, payload);
 }
 

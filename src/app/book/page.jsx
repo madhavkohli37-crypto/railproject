@@ -14,6 +14,7 @@ export default function BookingPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [submittedBooking, setSubmittedBooking] = useState(null);
+  const submittedBookingId = submittedBooking?.id;
   const priorityEligible = Number(user?.good_human_score ?? 0) > 700;
 
   const [form, setForm] = useState({
@@ -43,17 +44,16 @@ export default function BookingPage() {
   }, []);
 
   useEffect(() => {
-    if (!submittedBooking) return undefined;
     const handleBookingUpdate = (event) => {
       const updated = event.detail?.booking;
-      if (updated?.id !== submittedBooking.id) return;
+      if (updated?.id !== submittedBookingId) return;
       setSubmittedBooking(current => ({ ...current, ...updated }));
     };
     const events = ['accepted', 'updated', 'arrived', 'started', 'completed', 'cancelled'];
     events.forEach(event => window.addEventListener(`railassist:booking:${event}`, handleBookingUpdate));
     const handleSync = event => {
       const synced = Array.isArray(event.detail)
-        ? event.detail.find(booking => booking.id === submittedBooking.id)
+        ? event.detail.find(booking => booking.id === submittedBookingId)
         : null;
       if (synced) setSubmittedBooking(synced);
     };
@@ -62,7 +62,13 @@ export default function BookingPage() {
       events.forEach(event => window.removeEventListener(`railassist:booking:${event}`, handleBookingUpdate));
       window.removeEventListener('railassist:sync', handleSync);
     };
-  }, [submittedBooking]);
+  }, [submittedBookingId]);
+
+  useEffect(() => {
+    if (submittedBookingId) {
+      window.dispatchEvent(new CustomEvent('railassist:watch-booking', { detail: { bookingId: submittedBookingId } }));
+    }
+  }, [submittedBookingId]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -105,6 +111,7 @@ export default function BookingPage() {
         priority_requested: priorityEligible && form.priority_requested
       });
       setSubmittedBooking(response.data.booking);
+      window.dispatchEvent(new CustomEvent('railassist:watch-booking', { detail: { bookingId: response.data.booking.id } }));
       setSuccess('Request sent instantly. We are finding an available porter near you…');
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to create booking');

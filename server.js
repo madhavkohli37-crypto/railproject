@@ -24,12 +24,14 @@ app.prepare().then(() => {
 
   io.on('connection', socket => {
     const userId = socket.user.userId;
+    console.log(`[socket] connected user=${userId} role=${socket.user.role}`);
     socket.join(`user:${userId}`);
     if (socket.user.role === 'PROVIDER') socket.join(`provider:${userId}`);
     socket.on('booking:subscribe', bookingId => socket.join(`booking:${Number(bookingId)}`));
     socket.on('booking:unsubscribe', bookingId => socket.leave(`booking:${Number(bookingId)}`));
     // The browser re-fetches its authorized HTTP resource after reconnect.
     socket.on('booking:sync', callback => callback?.({ reload: true }));
+    socket.on('disconnect', reason => console.log(`[socket] disconnected user=${userId} reason=${reason}`));
   });
 
   const port = Number(process.env.PORT || 3000);
