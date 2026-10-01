@@ -15,6 +15,9 @@ export async function POST(req) {
     if (!name || !email || !password || !phone || !provider_type || !station) {
       return NextResponse.json({ error: 'All required fields must be filled.' }, { status: 400 });
     }
+    if (!/^\+?[1-9]\d{7,14}$/.test(String(phone).trim().replace(/[\s()-]/g, ''))) {
+      return NextResponse.json({ error: 'Please provide a valid phone number.' }, { status: 400 });
+    }
     if (password.length < 6) {
       return NextResponse.json({ error: 'Password must be at least 6 characters.' }, { status: 400 });
     }

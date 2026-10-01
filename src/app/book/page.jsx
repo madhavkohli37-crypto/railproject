@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import api from '@/lib/axiosInstance';
 import BookingCard from '@/components/BookingCard';
+import { CANCELLATION_REASONS } from '@/lib/bookingLifecycle';
 
 export default function BookingPage() {
   const router = useRouter();
@@ -122,15 +123,22 @@ export default function BookingPage() {
 
   const handleCancel = async (bookingId) => {
     if (!window.confirm('Are you sure you want to cancel this booking?')) return;
+    const menu = CANCELLATION_REASONS.map((item, index) => `${index + 1}. ${item.label}`).join('\n');
+    const option = CANCELLATION_REASONS[Number(window.prompt(`Why are you cancelling?\n${menu}`, '1')) - 1];
+    if (!option) return;
+    const description = option.code === 'OTHER' ? window.prompt('Describe the reason (required):') : option.label;
+    if (!description?.trim()) return;
     try {
       const response = await api.patch(`/bookings/${bookingId}/cancel`, {
-        reason: 'Cancelled by passenger from booking page',
+        reason_code: option.code,
+        description: description.trim(),
       });
       setSubmittedBooking(current => ({
         ...current,
         ...(response.data.booking || {}),
         status: 'CANCELLED',
-        cancellation_reason: 'Cancelled by passenger from booking page',
+        cancellation_reason: option.code,
+        cancellation_description: description.trim(),
       }));
       setSuccess('Booking cancelled successfully.');
     } catch (err) {

@@ -445,6 +445,19 @@ one simultaneous provider can win. Serverless deployments that cannot keep a
 long-lived Node process should run Socket.IO separately; HTTP booking APIs
 remain available without realtime delivery.
 
+### Booking privacy and cancellation rules
+
+Signup requires a valid phone number (8–15 digits, with an optional country
+code). Phone numbers are not exposed by general APIs; they are returned only
+to the passenger and assigned provider after an active booking is accepted.
+Porter, wheelchair, and meet-and-greet bookings share the lifecycle
+`SEARCHING → ACCEPTED → ARRIVED → STARTED → COMPLETED`. MongoDB performs the
+first-accept operation atomically and Socket.IO broadcasts changes without
+polling. Passenger cancellation is terminal. Provider cancellation before
+service start returns that service to `SEARCHING` for rematching. Both sides
+must select a cancellation reason, and `Other` requires a description; actor,
+reason, description, timestamp, and service information are persisted.
+
 The first database connection creates the required collections and seeds the configured development accounts. See [`admin.md`](./admin.md) for credential and account-management details.
 
 ## 🔒 Security and operational considerations

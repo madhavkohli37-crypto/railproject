@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import { getDB } from '@/lib/db';
 import { verifyToken } from '@/lib/auth';
 import { emitBooking, emitRealtime, notifyUsers } from '@/lib/realtime';
+import { parseCancellation, activeBookingStatus } from '@/lib/bookingLifecycle';
 
 const allowed = ['ARRIVED', 'STARTED', 'COMPLETED', 'CANCELLED_BY_PROVIDER'];
 
@@ -11,13 +12,19 @@ export async function PATCH(req, { params }) {
   if (!decoded || decoded.role !== 'PROVIDER') return NextResponse.json({ error: 'Access denied' }, { status: 403 });
   const bookingId = Number((await params).id);
   try {
-    const { status, otp, reason } = await req.json();
+    const body = await req.json();
+    const { status, otp } = body;
     if (!allowed.includes(status)) return NextResponse.json({ error: `Status must be one of ${allowed.join(', ')}` }, { status: 400 });
-    if (status === 'CANCELLED_BY_PROVIDER' && (!reason || reason.trim().length < 3)) return NextResponse.json({ error: 'A cancellation reason is required' }, { status: 400 });
+    const cancellation = status === 'CANCELLED_BY_PROVIDER' ? parseCancellation(body) : null;
+    if (cancellation?.error) return NextResponse.json({ error: cancellation.error }, { status: 400 });
     const db = await getDB();
     const booking = await db.collection('bookings').findOne({ id: bookingId, 'services.provider_id': decoded.userId });
     if (!booking) return NextResponse.json({ error: 'You are not assigned to this booking' }, { status: 403 });
+    if (!activeBookingStatus(booking.status)) return NextResponse.json({ error: 'Completed or cancelled bookings cannot change state.' }, { status: 409 });
     const service = booking.services.find(s => s.provider_id === decoded.userId);
+    if (status === 'CANCELLED_BY_PROVIDER' && ['STARTED', 'COMPLETED'].includes(service?.status)) {
+      return NextResponse.json({ error: 'Provider cancellation is only allowed before service starts.' }, { status: 409 });
+    }
     if (status === 'STARTED') {
       if (service.status !== 'ARRIVED' || !otp) return NextResponse.json({ error: 'Provider must arrive and receive the passenger OTP first' }, { status: 409 });
       const hash = crypto.createHash('sha256').update(String(otp)).digest('hex');
@@ -55,8 +62,14 @@ export async function PATCH(req, { params }) {
       set['services.$.provider_id'] = null;
       set['services.$.provider_name'] = null;
       set['services.$.provider_phone'] = null;
-      set['services.$.cancellation_reason'] = reason.trim();
-      set.status = 'SEARCHING';
+      set['services.$.cancellation_reason'] = cancellation.reasonCode;
+      set['services.$.cancellation_description'] = cancellation.description;
+      set.cancelled_by = 'PROVIDER';
+      set.cancellation_reason = cancellation.reasonCode;
+      set.cancellation_description = cancellation.description;
+      set.cancelled_at = now;
+      set.cancellation_service_types = [service.type];
+      set.status = 'CANCELLED';
     }
     const update = { $set: set };
     if (status === 'CANCELLED_BY_PROVIDER' || status === 'COMPLETED') {
@@ -84,25 +97,22 @@ export async function PATCH(req, { params }) {
           : 'booking:updated';
     emitBooking(updated, event);
     if (status === 'CANCELLED_BY_PROVIDER') {
-      const types = [...new Set(updated.services.filter(service => !service.provider_id).map(service => service.type))];
-      const providers = await db.collection('users').find({
-        role: 'PROVIDER',
-        station: { $regex: new RegExp(`^${updated.station}$`, 'i') },
-        provider_status: 'ONLINE',
-        available: true,
-        $or: [{ provider_types: { $in: types } }, { provider_type: { $in: types } }],
-      }, { projection: { id: 1 } }).toArray();
-      for (const provider of providers) emitRealtime('booking:offer', { booking: updated }, [`provider:${provider.id}`]);
+      const { otp_hash, otp_code, ...safeCancelledBooking } = updated;
+      emitRealtime('booking:cancelled', { booking: safeCancelledBooking }, [
+        `user:${updated.user_id}`,
+        `provider:${decoded.userId}`,
+        `booking:${bookingId}`,
+      ]);
     }
     const title = status === 'CANCELLED_BY_PROVIDER' ? 'Provider cancelled — rematching' : `Service ${status.toLowerCase()}`;
     const message = status === 'CANCELLED_BY_PROVIDER'
-      ? `Your provider cancelled: ${reason}. We are looking for another provider.`
+      ? `Your provider cancelled: ${cancellation.description}. We are looking for another provider.`
       : `Your provider marked the service ${status.toLowerCase()}.`;
     await notifyUsers(
       [updated.user_id, decoded.userId],
       title,
       message,
-      { booking_id: bookingId, status, reason: reason || null }
+      { booking_id: bookingId, status, reason: cancellation?.reasonCode || null, description: cancellation?.description || null }
     );
     const { otp_hash, otp_code, ...safeBooking } = updated;
     return NextResponse.json({ message: 'Job status updated', status, booking: safeBooking });

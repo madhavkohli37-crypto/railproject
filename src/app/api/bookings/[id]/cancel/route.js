@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getDB } from '@/lib/db';
 import { verifyToken } from '@/lib/auth';
 import { emitBooking, emitRealtime, notifyUsers } from '@/lib/realtime';
+import { parseCancellation } from '@/lib/bookingLifecycle';
 
 export async function PATCH(req, { params }) {
   const decoded = verifyToken(req);
@@ -15,7 +16,8 @@ export async function PATCH(req, { params }) {
   try {
     const db = await getDB();
     const body = await req.json().catch(() => ({}));
-    const reason = typeof body.reason === 'string' && body.reason.trim() ? body.reason.trim() : 'Cancelled by passenger';
+    const cancellation = parseCancellation(body);
+    if (cancellation.error) return NextResponse.json({ error: cancellation.error }, { status: 400 });
     const booking = await db.collection('bookings').findOne({ id: bookingId, user_id: decoded.userId });
 
     if (!booking) {
@@ -37,7 +39,16 @@ export async function PATCH(req, { params }) {
     const updatedResult = await db.collection('bookings').findOneAndUpdate(
       { id: bookingId, status: { $nin: ['CANCELLED', 'COMPLETED'] } },
       {
-        $set: { status: 'CANCELLED', cancellation_reason: reason, cancelled_by: 'PASSENGER', updated_at: now, otp_used: true },
+        $set: {
+          status: 'CANCELLED',
+          cancelled_by: 'PASSENGER',
+          cancellation_reason: cancellation.reasonCode,
+          cancellation_description: cancellation.description,
+          cancelled_at: now,
+          cancellation_service_types: booking.services.map(service => service.type),
+          updated_at: now,
+          otp_used: true,
+        },
         $unset: { otp_hash: '', otp_code: '' },
       },
       { returnDocument: 'after' }
@@ -63,8 +74,8 @@ export async function PATCH(req, { params }) {
     await notifyUsers(
       [decoded.userId, ...eligibleProviders.map(provider => provider.id)],
       'Booking cancelled',
-      `Booking #${bookingId} was cancelled by the passenger: ${reason}`,
-      { booking_id: bookingId, reason, status: 'CANCELLED' }
+      `Booking #${bookingId} was cancelled by the passenger: ${cancellation.description}`,
+      { booking_id: bookingId, reason: cancellation.reasonCode, description: cancellation.description, status: 'CANCELLED' }
     );
 
     await db.collection('audit_logs').insertOne({
@@ -72,7 +83,7 @@ export async function PATCH(req, { params }) {
       actor_id: decoded.userId,
       booking_id: bookingId,
       timestamp: now,
-      details: reason
+      details: `${cancellation.reasonCode}: ${cancellation.description}`
     });
 
     return NextResponse.json({ message: 'Booking cancelled successfully', booking: updated });

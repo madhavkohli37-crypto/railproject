@@ -70,6 +70,13 @@ export default function BookingCard({ booking, onCancel }) {
       </div>
 
       <div className="mb-4">
+        {booking.status === 'CANCELLED' && (
+          <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm dark:border-red-800 dark:bg-red-900/20">
+            <p className="font-bold text-red-800 dark:text-red-300">Request cancelled{booking.cancelled_by === 'PROVIDER' ? ' by the service provider' : ' by the passenger'}</p>
+            {booking.cancellation_description && <p className="mt-1 text-red-700 dark:text-red-300">Reason: {booking.cancellation_description}</p>}
+            {booking.cancelled_at && <p className="mt-1 text-xs text-red-600 dark:text-red-400">Time: {formatDate(booking.cancelled_at)}</p>}
+          </div>
+        )}
         {searching && (
           <div className="mb-4 overflow-hidden rounded-xl border border-blue-200 bg-gradient-to-r from-blue-50 via-indigo-50 to-blue-50 p-4 dark:border-blue-800 dark:from-blue-900/20 dark:via-indigo-900/20 dark:to-blue-900/20">
             <div className="flex items-center gap-3">

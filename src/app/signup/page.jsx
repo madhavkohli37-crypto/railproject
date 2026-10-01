@@ -100,7 +100,7 @@ export default function SignupPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Phone Number</label>
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Phone Number <span className="text-red-400">*</span></label>
                   <input
                     type="tel"
                     name="phone"
@@ -108,6 +108,7 @@ export default function SignupPage() {
                     onChange={handleChange}
                     placeholder="+91 98765 43210"
                     className="input-field"
+                    required
                   />
                 </div>
 

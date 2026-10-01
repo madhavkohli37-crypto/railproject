@@ -34,16 +34,29 @@ export async function notifyUsers(userIds, title, message, data = {}) {
 
 export function emitBooking(booking, event = 'booking:updated') {
   const { otp_hash, otp_code, ...safeBooking } = booking || {};
+  if (!booking) return;
+  // Contact details are deliberately audience-scoped. A booking room is only
+  // joined after the server has authorized the party.
+  const providerRooms = (booking.services || []).flatMap(s => s.provider_id ? [`provider:${s.provider_id}`, `user:${s.provider_id}`] : []);
+  const providerBooking = {
+    ...safeBooking,
+    services: (booking.services || []).map(service => {
+      const { provider_phone, ...withoutProviderPhone } = service;
+      return withoutProviderPhone;
+    }),
+  };
   const userRoom = `user:${booking.user_id}`;
-  const otherRooms = [`booking:${booking.id}`, ...(booking.services || []).flatMap(s => s.provider_id ? [`provider:${s.provider_id}`, `user:${s.provider_id}`] : [])];
-  emitRealtime(event, { booking: safeBooking }, otherRooms);
+  const otherRooms = [`booking:${booking.id}`, ...providerRooms];
+  emitRealtime(event, { booking: providerBooking }, providerRooms);
+  emitRealtime(event, { booking: safeBooking }, [`booking:${booking.id}`]);
   emitRealtime(event, { booking: { ...safeBooking, ...(otp_code ? { otp_code } : {}) } }, [userRoom]);
   const aliases = {
     'booking:created': 'booking:new',
     'booking:updated': null,
   };
   if (aliases[event]) {
-    emitRealtime(aliases[event], { booking: safeBooking }, otherRooms);
+    emitRealtime(aliases[event], { booking: providerBooking }, providerRooms);
+    emitRealtime(aliases[event], { booking: safeBooking }, [`booking:${booking.id}`]);
     emitRealtime(aliases[event], { booking: { ...safeBooking, ...(otp_code ? { otp_code } : {}) } }, [userRoom]);
   }
 }

@@ -7,6 +7,18 @@ import { useAuth } from '@/context/AuthContext';
 import api from '@/lib/axiosInstance';
 import BookingCard from '@/components/BookingCard';
 import RewardCoinIcon from '@/components/RewardCoinIcon';
+import { CANCELLATION_REASONS } from '@/lib/bookingLifecycle';
+
+function chooseCancellation() {
+  const menu = CANCELLATION_REASONS.map((item, index) => `${index + 1}. ${item.label}`).join('\n');
+  const selected = Number(window.prompt(`Select a cancellation reason:\n${menu}`, '1'));
+  const option = CANCELLATION_REASONS[selected - 1];
+  if (!option) return null;
+  const description = option.code === 'OTHER'
+    ? window.prompt('Describe the reason (required):')
+    : option.label;
+  return description?.trim() ? { reason_code: option.code, description: description.trim() } : null;
+}
 
 function RewardsSummary() {
   const [state, setState] = useState(null);
@@ -124,8 +136,10 @@ function PassengerView({ user }) {
 
   const handleCancel = async (bookingId) => {
     if (!window.confirm('Are you sure you want to cancel this booking?')) return;
+    const cancellation = chooseCancellation();
+    if (!cancellation) return;
     try {
-      await api.patch(`/bookings/${bookingId}/cancel`);
+      await api.patch(`/bookings/${bookingId}/cancel`, cancellation);
       setCancelMsg('Booking cancelled successfully!');
       fetchBookings();
       setTimeout(() => setCancelMsg(''), 4000);
@@ -354,10 +368,24 @@ function ProviderView({ user }) {
         ...offeredJobs,
       ]);
     };
+    const applyCancellation = event => {
+      const booking = event.detail?.booking;
+      if (!booking?.id) return;
+      setJobs(current => current.map(job => job.booking_id === booking.id
+        ? {
+          ...job,
+          status: 'CANCELLED',
+          cancellation_reason: booking.cancellation_reason,
+          cancellation_description: booking.cancellation_description,
+          cancelled_by: booking.cancelled_by,
+          cancelled_at: booking.cancelled_at,
+        }
+        : job));
+    };
     window.addEventListener('railassist:booking:offer', applyOffer);
     window.addEventListener('railassist:booking:accepted', refresh);
     window.addEventListener('railassist:booking:removed', refresh);
-    window.addEventListener('railassist:booking:cancelled', refresh);
+    window.addEventListener('railassist:booking:cancelled', applyCancellation);
     window.addEventListener('railassist:provider:arrived', refresh);
     window.addEventListener('railassist:booking:started', refresh);
     window.addEventListener('railassist:booking:completed', refresh);
@@ -367,7 +395,7 @@ function ProviderView({ user }) {
       window.removeEventListener('railassist:booking:offer', applyOffer);
       window.removeEventListener('railassist:booking:accepted', refresh);
       window.removeEventListener('railassist:booking:removed', refresh);
-      window.removeEventListener('railassist:booking:cancelled', refresh);
+      window.removeEventListener('railassist:booking:cancelled', applyCancellation);
       window.removeEventListener('railassist:provider:arrived', refresh);
       window.removeEventListener('railassist:booking:started', refresh);
       window.removeEventListener('railassist:booking:completed', refresh);
@@ -392,7 +420,7 @@ function ProviderView({ user }) {
         await api.patch(`/provider/job/${bookingId}/status`, {
           status,
           ...(status === 'STARTED' ? { otp: value } : {}),
-          ...(status === 'CANCELLED_BY_PROVIDER' ? { reason: value } : {}),
+          ...(status === 'CANCELLED_BY_PROVIDER' ? { reason_code: value.reason_code, description: value.description } : {}),
         });
       }
       fetchJobs();
@@ -465,6 +493,12 @@ function ProviderView({ user }) {
                 {job.type === 'PORTER' && <div><span className="text-gray-500 dark:text-gray-400 block text-xs">Bags</span><span className="font-semibold dark:text-white">{job.bags_count}</span></div>}
               </div>
               <div className="flex space-x-3 border-t border-gray-100 dark:border-gray-700 pt-4">
+                {job.status === 'CANCELLED' && (
+                  <div className="w-full rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-900/20 dark:text-red-300">
+                    <strong>Request cancelled by passenger</strong>
+                    {job.cancellation_description && <div>Reason: {job.cancellation_description}</div>}
+                  </div>
+                )}
                 {job.status === 'SEARCHING' && (
                   <>
                     <button onClick={() => updateStatus(job.booking_id, 'SEARCHING')} className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg font-semibold flex-1 active:scale-95">✅ Accept</button>
@@ -492,8 +526,8 @@ function ProviderView({ user }) {
                 )}
                 {['ACCEPTED', 'ARRIVED'].includes(job.status) && (
                   <button onClick={() => {
-                    const reason = window.prompt('Why are you cancelling this booking?');
-                    if (reason) updateStatus(job.booking_id, 'CANCELLED_BY_PROVIDER', reason);
+                    const cancellation = chooseCancellation();
+                    if (cancellation) updateStatus(job.booking_id, 'CANCELLED_BY_PROVIDER', cancellation);
                   }} className="bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 text-gray-800 dark:text-white px-4 py-2 rounded-lg font-semibold">Cancel</button>
                 )}
                 {job.status === 'COMPLETED' && (
