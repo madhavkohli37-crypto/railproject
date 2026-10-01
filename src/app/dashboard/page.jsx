@@ -293,6 +293,10 @@ function ProviderView({ user }) {
   const [loading, setLoading] = useState(true);
   const [cancelJob, setCancelJob] = useState(null);
   const [cancelLoading, setCancelLoading] = useState(false);
+  const [otpJob, setOtpJob] = useState(null);
+  const [otp, setOtp] = useState('');
+  const [otpError, setOtpError] = useState('');
+  const [otpLoading, setOtpLoading] = useState(false);
 
   const fetchJobs = async () => {
     try {
@@ -376,10 +380,13 @@ function ProviderView({ user }) {
         });
       }
       fetchJobs();
+      return true;
     } catch (err) {
       const message = err.response?.data?.error || 'Failed to update status';
-      alert(message);
+      if (status !== 'STARTED') alert(message);
       fetchJobs();
+      if (status === 'STARTED') throw err;
+      return false;
     }
   };
 
@@ -391,6 +398,27 @@ function ProviderView({ user }) {
       setCancelJob(null);
     } finally {
       setCancelLoading(false);
+    }
+  };
+
+  const verifyOtp = async event => {
+    event.preventDefault();
+    if (!otpJob || !/^\d{6}$/.test(otp)) {
+      setOtpError('Enter the 6-digit passenger OTP.');
+      return;
+    }
+    setOtpLoading(true);
+    setOtpError('');
+    try {
+      const started = await updateStatus(otpJob.booking_id, 'STARTED', otp);
+      if (started) {
+        setOtpJob(null);
+        setOtp('');
+      }
+    } catch (err) {
+      setOtpError(err.response?.data?.error || 'Unable to verify OTP');
+    } finally {
+      setOtpLoading(false);
     }
   };
 
@@ -485,11 +513,22 @@ function ProviderView({ user }) {
                 {job.status === 'ACCEPTED' && (
                   <button onClick={() => updateStatus(job.booking_id, 'ARRIVED')} className="bg-purple-500 hover:bg-purple-600 text-white px-6 py-2 rounded-lg font-semibold flex-1 active:scale-95">📍 Provider Arrived</button>
                 )}
-                {job.status === 'ARRIVED' && (
-                  <button onClick={() => {
-                    const otp = window.prompt('Enter the passenger OTP');
-                    if (otp) updateStatus(job.booking_id, 'STARTED', otp);
-                  }} className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-2 rounded-lg font-semibold flex-1 active:scale-95">🔐 Verify OTP & Start</button>
+                {job.status === 'ARRIVED' && !otpJob && (
+                  <button onClick={() => { setOtpJob(job); setOtp(''); setOtpError(''); }} className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-2 rounded-lg font-semibold flex-1 active:scale-95">🔐 Verify OTP & Start</button>
+                )}
+                {otpJob?.booking_id === job.booking_id && (
+                  <form onSubmit={verifyOtp} className="w-full rounded-xl border border-orange-200 bg-orange-50 p-4 dark:border-orange-800 dark:bg-orange-900/20">
+                    <div className="mb-3">
+                      <h4 className="font-bold text-orange-900 dark:text-orange-200">Verify passenger OTP</h4>
+                      <p className="text-xs text-orange-700 dark:text-orange-300">Ask the passenger for the 6-digit code shown on their booking.</p>
+                    </div>
+                    <div className="flex flex-col gap-2 sm:flex-row">
+                      <input autoFocus inputMode="numeric" pattern="[0-9]*" maxLength={6} value={otp} onChange={event => setOtp(event.target.value.replace(/\D/g, ''))} placeholder="Enter 6-digit OTP" className="input-field flex-1 tracking-[0.35em]" />
+                      <button type="submit" disabled={otpLoading} className="btn-primary disabled:opacity-50">{otpLoading ? 'Verifying…' : 'Verify & Start'}</button>
+                      <button type="button" onClick={() => { setOtpJob(null); setOtp(''); setOtpError(''); }} className="btn-outline">Cancel</button>
+                    </div>
+                    {otpError && <p className="mt-2 text-sm font-medium text-red-600">{otpError}</p>}
+                  </form>
                 )}
                 {job.status === 'STARTED' && (
                   <button onClick={() => updateStatus(job.booking_id, 'COMPLETED')} className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-semibold flex-1 active:scale-95">🏁 Complete Service</button>
