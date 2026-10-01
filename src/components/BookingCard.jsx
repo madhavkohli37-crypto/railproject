@@ -37,7 +37,7 @@ export default function BookingCard({ booking, onCancel }) {
     });
   };
 
-  const canCancel = ['REQUESTED', 'SEARCHING', 'ASSIGNED', 'PARTIALLY_ASSIGNED', 'ACCEPTED', 'ARRIVED', 'IN_PROGRESS'].includes(booking.status)
+  const canCancel = ['REQUESTED', 'SEARCHING', 'ASSIGNED', 'PARTIALLY_ASSIGNED', 'ACCEPTED', 'ARRIVED', 'STARTED', 'IN_PROGRESS'].includes(booking.status)
     && typeof onCancel === 'function';
   const searching = ['REQUESTED', 'SEARCHING'].includes(booking.status);
 
@@ -136,8 +136,11 @@ export default function BookingCard({ booking, onCancel }) {
       </div>
       {booking.cancellation_reason && (
         <div className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-900/20 dark:text-red-200">
-          <span className="font-semibold">Cancellation reason:</span> {booking.cancellation_reason}
-          {booking.cancelled_by && <span className="ml-1 text-xs uppercase opacity-75">({booking.cancelled_by.toLowerCase()})</span>}
+          <div className="font-semibold">Request Cancelled</div>
+          <div className="mt-1"><span className="font-semibold">Cancelled by:</span> {booking.cancelled_by === 'PASSENGER' ? 'Passenger' : 'Service Provider'}</div>
+          <div><span className="font-semibold">Reason:</span> {booking.cancellation_reason}</div>
+          {booking.cancellation_description && <div><span className="font-semibold">Details:</span> {booking.cancellation_description}</div>}
+          {booking.cancelled_at && <div><span className="font-semibold">Time:</span> {formatDate(booking.cancelled_at)}</div>}
         </div>
       )}
     </div>

@@ -23,9 +23,10 @@ This project is an application-level prototype. Real railway deployment must fol
 - Provider ONLINE/OFFLINE status and service-type filtering
 - Atomic first-come acceptance with a server-generated single-use OTP
 - Providers can decline an offer; the passenger sees the live number of declined offers while matching continues
-- Arrival, OTP-gated start, completion, and reasoned cancellation/rematching
-- Passenger cancellation immediately removes the request from every matching provider portal
-- Booking history and cancellation
+- Arrival, OTP-gated start, completion, and mandatory reasoned cancellation
+- Passenger or provider cancellation is terminal, persists the reason, optional details, actor, and timestamp, and immediately removes further booking actions
+- The other participant sees the cancellation reason and time on the open booking screen through `booking:cancelled`, without refreshing or opening notifications
+- Cancelled bookings remain available in booking history and account activity
 - Dedicated navigation for active assistance, booking history, notifications, complaint history, and account activity
 - Account settings for every role with editable name and required phone number, optional email, and password changes
 - Provider/job status tracking
@@ -37,6 +38,8 @@ This project is an application-level prototype. Real railway deployment must fol
 - Image evidence upload
 - Complaint status and complaint logs
 - Private account and complaint notifications
+- Passengers and employees can submit categorized improvement suggestions from `/suggestions`
+- Complaint managers and admins can review all submitted suggestions from their dashboards
 - Live account notifications for booking acceptance, cancellation, arrival, OTP start, completion, and provider rematching
 - Complete accused-passenger case details when a complaint is upheld against the account
 - Appeal and re-review request for an upheld decision
@@ -289,13 +292,15 @@ All API routes are implemented in `src/app/api/`.
 | `GET` | `/api/stations` | No | List stations |
 | `POST` | `/api/bookings` | Authenticated | Create a service booking |
 | `GET` | `/api/bookings/my` | Passenger | List the passenger's bookings |
-| `PATCH` | `/api/bookings/:id/cancel` | Passenger | Cancel an eligible booking |
+| `PATCH` | `/api/bookings/:id/cancel` | Passenger | Cancel an eligible booking; `reason` is required and `description` is optional |
 | `POST` | `/api/provider/apply` | No | Submit a provider application |
 | `GET` | `/api/provider/dashboard` | Provider | List assigned jobs |
 | `PATCH` | `/api/provider/availability` | Provider | Update provider availability |
 | `GET` | `/api/provider/jobs` | Provider | List matching open offers |
 | `POST` | `/api/provider/job/:id/accept` | Provider | Atomically accept one service offer |
-| `PATCH` | `/api/provider/job/:id/status` | Provider | Update an assigned job |
+| `PATCH` | `/api/provider/job/:id/status` | Provider | Update an assigned job; `CANCELLED_BY_PROVIDER` requires `reason` and optionally accepts `description` |
+| `POST` | `/api/suggestions` | Passenger or Provider | Submit a categorized improvement suggestion |
+| `GET` | `/api/suggestions` | Manager or Admin | Review submitted suggestions and submitter details |
 | `GET` | `/api/admin/dashboard` | Admin | Load admin statistics and records |
 | `POST` | `/api/admin/employees` | Admin | Create an employee |
 | `DELETE` | `/api/admin/employees/:id` | Admin | Remove an employee |

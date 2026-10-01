@@ -13,6 +13,7 @@ const NAV_LINKS = [
   { href: '/bookings', label: 'Booking History', authOnly: true, roles: ['PASSENGER'] },
   { href: '/notifications', label: 'Notifications', authOnly: true },
   { href: '/activity', label: 'Account Activity', authOnly: true },
+  { href: '/suggestions', label: 'Suggest Changes', authOnly: true },
   { href: '/profile', label: 'Account Settings', authOnly: true },
   { href: '/complaints', label: 'Complaint History', authOnly: true, roles: ['PASSENGER'] },
   { href: '/dashboard', label: 'My Dashboard', authOnly: true },
@@ -77,9 +78,9 @@ export default function Navbar() {
       </div>
 
       {/* ── Main Navbar ── */}
-      <nav className="bg-[#1a3a6b] dark:bg-[#0a1929] text-white">
+      <nav className="overflow-hidden bg-[#1a3a6b] text-white dark:bg-[#0a1929]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-14">
+          <div className="flex h-14 min-w-0 items-center gap-3">
 
             {/* Logo */}
             <Link href="/" className="flex items-center gap-2.5 group shrink-0">
@@ -95,12 +96,12 @@ export default function Navbar() {
             </Link>
 
             {/* Desktop Nav Links */}
-            <div className="hidden md:flex items-center gap-1">
+            <div className="hidden min-w-0 flex-1 items-center gap-1 overflow-x-auto md:flex">
               {visibleLinks.map(link => (
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  className={`whitespace-nowrap rounded-md px-3 py-2 text-sm font-medium transition-colors ${
                     isActive(link.href)
                       ? 'bg-white/20 text-white'
                       : 'text-blue-200 hover:text-white hover:bg-white/10'
@@ -112,7 +113,7 @@ export default function Navbar() {
             </div>
 
             {/* Auth section */}
-            <div className="hidden md:flex items-center gap-3">
+            <div className="hidden shrink-0 items-center gap-3 md:flex">
               {user ? (
                 <>
                   <div className="flex items-center gap-2 text-sm">

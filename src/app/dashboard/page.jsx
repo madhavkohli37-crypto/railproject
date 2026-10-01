@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import api from '@/lib/axiosInstance';
 import BookingCard from '@/components/BookingCard';
+import CancellationDialog from '@/components/CancellationDialog';
 import RewardCoinIcon from '@/components/RewardCoinIcon';
 
 function RewardsSummary() {
@@ -39,6 +40,8 @@ function PassengerView({ user }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [cancelMsg, setCancelMsg] = useState('');
+  const [cancelBookingId, setCancelBookingId] = useState(null);
+  const [cancelLoading, setCancelLoading] = useState(false);
   const [appealReasons, setAppealReasons] = useState({});
   const [appealLoading, setAppealLoading] = useState({});
 
@@ -97,15 +100,21 @@ function PassengerView({ user }) {
     return () => window.removeEventListener('railassist:notification:new', refreshNotifications);
   }, []);
 
-  const handleCancel = async (bookingId) => {
-    if (!window.confirm('Are you sure you want to cancel this booking?')) return;
+  const handleCancel = bookingId => setCancelBookingId(bookingId);
+
+  const confirmCancel = async ({ reason, description }) => {
+    if (!cancelBookingId) return;
+    setCancelLoading(true);
     try {
-      await api.patch(`/bookings/${bookingId}/cancel`);
+      await api.patch(`/bookings/${cancelBookingId}/cancel`, { reason, description });
       setCancelMsg('Booking cancelled successfully!');
       fetchBookings();
+      setCancelBookingId(null);
       setTimeout(() => setCancelMsg(''), 4000);
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to cancel booking');
+    } finally {
+      setCancelLoading(false);
     }
   };
 
@@ -265,6 +274,7 @@ function PassengerView({ user }) {
           </div>
         )}
       </div>
+      <CancellationDialog open={Boolean(cancelBookingId)} onClose={() => setCancelBookingId(null)} onConfirm={confirmCancel} loading={cancelLoading} />
     </div>
   );
 }
@@ -276,6 +286,8 @@ function ProviderView({ user }) {
   const [jobs, setJobs] = useState([]);
   const [available, setAvailable] = useState(user?.provider_status !== 'OFFLINE' && user?.available !== false);
   const [loading, setLoading] = useState(true);
+  const [cancelJob, setCancelJob] = useState(null);
+  const [cancelLoading, setCancelLoading] = useState(false);
 
   const fetchJobs = async () => {
     try {
@@ -338,7 +350,7 @@ function ProviderView({ user }) {
     } catch { alert('Failed to update availability'); }
   };
 
-  const updateStatus = async (bookingId, status, value) => {
+  const updateStatus = async (bookingId, status, value, description = '') => {
     try {
       setJobs(jobs.map(j => j.booking_id === bookingId ? { ...j, status } : j));
       if (status === 'SEARCHING') {
@@ -348,6 +360,7 @@ function ProviderView({ user }) {
           status,
           ...(status === 'STARTED' ? { otp: value } : {}),
           ...(status === 'CANCELLED_BY_PROVIDER' ? { reason: value } : {}),
+          ...(status === 'CANCELLED_BY_PROVIDER' ? { description } : {}),
         });
       }
       fetchJobs();
@@ -355,6 +368,17 @@ function ProviderView({ user }) {
       const message = err.response?.data?.error || 'Failed to update status';
       alert(message);
       fetchJobs();
+    }
+  };
+
+  const confirmProviderCancel = async ({ reason, description }) => {
+    if (!cancelJob) return;
+    setCancelLoading(true);
+    try {
+      await updateStatus(cancelJob.booking_id, 'CANCELLED_BY_PROVIDER', reason, description);
+      setCancelJob(null);
+    } finally {
+      setCancelLoading(false);
     }
   };
 
@@ -453,11 +477,17 @@ function ProviderView({ user }) {
                 {job.status === 'STARTED' && (
                   <button onClick={() => updateStatus(job.booking_id, 'COMPLETED')} className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-semibold flex-1 active:scale-95">🏁 Complete Service</button>
                 )}
-                {['ACCEPTED', 'ARRIVED'].includes(job.status) && (
-                  <button onClick={() => {
-                    const reason = window.prompt('Why are you cancelling this booking?');
-                    if (reason) updateStatus(job.booking_id, 'CANCELLED_BY_PROVIDER', reason);
-                  }} className="bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 text-gray-800 dark:text-white px-4 py-2 rounded-lg font-semibold">Cancel</button>
+                {['ACCEPTED', 'ARRIVED', 'STARTED', 'IN_PROGRESS'].includes(job.status) && (
+                  <button onClick={() => setCancelJob(job)} className="bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 text-gray-800 dark:text-white px-4 py-2 rounded-lg font-semibold">Cancel</button>
+                )}
+                {job.status === 'CANCELLED' && (
+                  <div className="w-full rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-900/30 dark:text-red-300">
+                    <div className="font-bold">Request cancelled</div>
+                    <div>Cancelled by: {job.cancelled_by === 'PASSENGER' ? 'Passenger' : 'Service Provider'}</div>
+                    <div>Reason: {job.cancellation_reason || 'Reason unavailable'}</div>
+                    {job.cancellation_description && <div>Details: {job.cancellation_description}</div>}
+                    {job.cancelled_at && <div>Time: {new Date(job.cancelled_at).toLocaleString('en-IN')}</div>}
+                  </div>
                 )}
                 {job.status === 'COMPLETED' && (
                   <div className="text-green-600 dark:text-green-400 font-bold flex items-center justify-center w-full bg-green-50 dark:bg-green-900/30 py-2 rounded-lg">🎉 Job Completed!</div>
@@ -467,6 +497,7 @@ function ProviderView({ user }) {
           ))}
         </div>
       )}
+      <CancellationDialog open={Boolean(cancelJob)} onClose={() => setCancelJob(null)} onConfirm={confirmProviderCancel} loading={cancelLoading} />
     </div>
   );
 }
@@ -541,6 +572,47 @@ function ComplaintsView() {
           {!open && complaint.resolution && <p className="text-sm text-gray-500">Resolution: {complaint.resolution.action}; fine ₹{complaint.resolution.fine_amount}; score penalty {complaint.resolution.score_penalty}. {complaint.resolution.notes || ''}</p>}
         </div>;
       })}
+    </div>
+  );
+}
+
+function SuggestionsView() {
+  const [suggestions, setSuggestions] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchSuggestions = async () => {
+    setLoading(true);
+    try {
+      const response = await api.get('/suggestions');
+      setSuggestions(response.data);
+    } catch (err) {
+      alert(err.response?.data?.error || 'Unable to load suggestions');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { fetchSuggestions(); }, []);
+
+  return (
+    <div className="space-y-5">
+      <div className="flex items-center justify-between">
+        <div><h1 className="text-2xl font-bold dark:text-white">💡 Suggested Changes</h1><p className="text-sm text-gray-500 dark:text-gray-400">Ideas submitted by passengers and employees.</p></div>
+        <button onClick={fetchSuggestions} className="btn-outline px-3 py-2 text-sm">🔄 Refresh</button>
+      </div>
+      {loading ? <div className="card h-40 animate-pulse" /> : suggestions.length === 0 ? <div className="card py-12 text-center text-gray-500">No suggestions have been submitted.</div> : suggestions.map(suggestion => (
+        <article key={suggestion.id} className="card">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div><h2 className="text-lg font-bold dark:text-white">#{suggestion.id} · {suggestion.title}</h2><p className="text-sm text-gray-500">{suggestion.category} · {new Date(suggestion.created_at).toLocaleString('en-IN')}</p></div>
+            <span className="badge-info">{suggestion.status}</span>
+          </div>
+          <p className="mt-4 whitespace-pre-wrap text-sm text-gray-700 dark:text-gray-300">{suggestion.description}</p>
+          <div className="mt-4 rounded-lg bg-gray-50 p-3 text-xs text-gray-600 dark:bg-gray-700/50 dark:text-gray-300">
+            Submitted by: <strong>{suggestion.submitter?.name || `User ${suggestion.submitted_by}`}</strong> ({suggestion.submitted_role === 'PROVIDER' ? 'Employee' : 'Passenger'})
+            {suggestion.submitter?.phone && ` · ${suggestion.submitter.phone}`}
+          </div>
+        </article>
+      ))}
     </div>
   );
 }
@@ -671,6 +743,7 @@ function AdminView({ currentUser }) {
     { id: 'employees', label: '👷 Employees' },
     { id: 'applications', label: `📋 Applications${pendingCount > 0 ? ` (${pendingCount})` : ''}` },
     { id: 'complaints', label: '📣 Complaints' },
+    { id: 'suggestions', label: '💡 Suggestions' },
     { id: 'audit_logs', label: '🗒️ Audit Logs' },
     { id: 'settings', label: '⚙️ Settings' },
   ];
@@ -722,6 +795,7 @@ function AdminView({ currentUser }) {
 
       {/* ── Overview ── */}
       {activeTab === 'complaints' && <ComplaintsView />}
+      {activeTab === 'suggestions' && <SuggestionsView />}
 
       {activeTab === 'overview' && (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
@@ -1215,7 +1289,7 @@ export default function DashboardPage() {
       {user.role === 'ADMIN'     && <AdminView currentUser={user} />}
       {user.role === 'PROVIDER'  && <ProviderView user={user} />}
       {user.role === 'PASSENGER' && <PassengerView user={user} />}
-      {user.role === 'MANAGER'   && <ComplaintsView />}
+      {user.role === 'MANAGER'   && <><ComplaintsView /><SuggestionsView /></>}
     </div>
   );
 }

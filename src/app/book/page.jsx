@@ -6,6 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useBooking } from '@/context/BookingContext';
 import api from '@/lib/axiosInstance';
 import BookingCard from '@/components/BookingCard';
+import CancellationDialog from '@/components/CancellationDialog';
 
 export default function BookingPage() {
   const router = useRouter();
@@ -16,6 +17,8 @@ export default function BookingPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [submittedBooking, setSubmittedBooking] = useState(null);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
   const priorityEligible = Number(user?.good_human_score ?? 0) > 700;
 
   const [form, setForm] = useState({
@@ -118,23 +121,28 @@ export default function BookingPage() {
     }
   };
 
-  const handleCancel = async (bookingId) => {
-    if (!window.confirm('Are you sure you want to cancel this booking?')) return;
+  const handleCancel = () => setCancelDialogOpen(true);
+
+  const confirmCancel = async ({ reason, description }) => {
+    if (!submittedBooking?.id) return;
+    setCancelling(true);
     try {
-      const response = await api.patch(`/bookings/${bookingId}/cancel`, {
-        reason: 'Cancelled by passenger from booking page',
-      });
+      const response = await api.patch(`/bookings/${submittedBooking.id}/cancel`, { reason, description });
       const cancelled = {
         ...submittedBooking,
         ...(response.data.booking || {}),
         status: 'CANCELLED',
-        cancellation_reason: 'Cancelled by passenger from booking page',
+        cancellation_reason: reason,
+        cancellation_description: description,
       };
       setSubmittedBooking(cancelled);
       setActiveBooking(null);
+      setCancelDialogOpen(false);
       setSuccess('Booking cancelled successfully.');
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to cancel booking');
+    } finally {
+      setCancelling(false);
     }
   };
 
@@ -264,6 +272,7 @@ export default function BookingPage() {
           </div>}
         </div>
       </div>
+      <CancellationDialog open={cancelDialogOpen} onClose={() => setCancelDialogOpen(false)} onConfirm={confirmCancel} loading={cancelling} />
     </div>
   );
 }

@@ -15,7 +15,11 @@ export async function PATCH(req, { params }) {
   try {
     const db = await getDB();
     const body = await req.json().catch(() => ({}));
-    const reason = typeof body.reason === 'string' && body.reason.trim() ? body.reason.trim() : 'Cancelled by passenger';
+    const reason = typeof body.reason === 'string' ? body.reason.trim() : '';
+    const description = typeof body.description === 'string' ? body.description.trim() : '';
+    if (!reason || (reason === 'Other' && !description)) {
+      return NextResponse.json({ error: 'Please select a cancellation reason. A custom reason is required when Other is selected.' }, { status: 400 });
+    }
     const booking = await db.collection('bookings').findOne({ id: bookingId, user_id: decoded.userId });
 
     if (!booking) {
@@ -26,22 +30,28 @@ export async function PATCH(req, { params }) {
     }
 
     const providerIds = booking.services.filter(s => s.provider_id).map(s => s.provider_id);
-    if (providerIds.length > 0) {
-      await db.collection('users').updateMany(
-        { id: { $in: providerIds } },
-        { $set: { available: true, provider_status: 'ONLINE' } }
-      );
-    }
-
     const now = new Date().toISOString();
     const updatedResult = await db.collection('bookings').findOneAndUpdate(
       { id: bookingId, status: { $nin: ['CANCELLED', 'COMPLETED'] } },
-      { $set: { status: 'CANCELLED', cancellation_reason: reason, cancelled_by: 'PASSENGER', updated_at: now } },
+      { $set: {
+        status: 'CANCELLED',
+        cancellation_reason: reason,
+        cancellation_description: description,
+        cancelled_by: 'PASSENGER',
+        cancelled_at: now,
+        updated_at: now,
+      } },
       { returnDocument: 'after' }
     );
     const updated = updatedResult?.value || updatedResult;
     if (!updated) {
       return NextResponse.json({ error: 'Booking was already changed. Refresh and try again.' }, { status: 409 });
+    }
+    if (providerIds.length > 0) {
+      await db.collection('users').updateMany(
+        { id: { $in: providerIds } },
+        { $set: { available: true, provider_status: 'ONLINE' } }
+      );
     }
     emitBooking(updated);
     emitRealtime('booking:cancelled', { booking: updated }, [`booking:${bookingId}`, `user:${decoded.userId}`, ...providerIds.map(id => `provider:${id}`)]);
@@ -61,7 +71,7 @@ export async function PATCH(req, { params }) {
       [decoded.userId, ...eligibleProviders.map(provider => provider.id)],
       'Booking cancelled',
       `Booking #${bookingId} was cancelled by the passenger: ${reason}`,
-      { booking_id: bookingId, reason, status: 'CANCELLED' }
+      { booking_id: bookingId, reason, description, status: 'CANCELLED', cancelled_by: 'PASSENGER', cancelled_at: now }
     );
 
     await db.collection('audit_logs').insertOne({
@@ -69,7 +79,7 @@ export async function PATCH(req, { params }) {
       actor_id: decoded.userId,
       booking_id: bookingId,
       timestamp: now,
-      details: reason
+      details: JSON.stringify({ reason, description, cancelled_by: 'PASSENGER', cancelled_at: now })
     });
 
     return NextResponse.json({ message: 'Booking cancelled successfully', booking: updated });
