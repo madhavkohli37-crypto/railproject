@@ -56,28 +56,38 @@ function PassengerView({ user }) {
   useEffect(() => {
     fetchBookings();
     const refresh = () => fetchBookings();
+    const applyBookingEvent = event => {
+      const updated = event.detail?.booking;
+      if (!updated?.id) return;
+      setBookings(current => {
+        const exists = current.some(booking => booking.id === updated.id);
+        return exists
+          ? current.map(booking => booking.id === updated.id ? { ...booking, ...updated } : booking)
+          : [updated, ...current];
+      });
+    };
     window.addEventListener('railassist:booking:new', refresh);
     window.addEventListener('railassist:booking:offer', refresh);
-    window.addEventListener('railassist:booking:accepted', refresh);
+    window.addEventListener('railassist:booking:accepted', applyBookingEvent);
     window.addEventListener('railassist:booking:declined', refresh);
     window.addEventListener('railassist:booking:removed', refresh);
-    window.addEventListener('railassist:booking:cancelled', refresh);
-    window.addEventListener('railassist:provider:arrived', refresh);
-    window.addEventListener('railassist:booking:started', refresh);
-    window.addEventListener('railassist:booking:completed', refresh);
-    window.addEventListener('railassist:booking:updated', refresh);
+    window.addEventListener('railassist:booking:cancelled', applyBookingEvent);
+    window.addEventListener('railassist:provider:arrived', applyBookingEvent);
+    window.addEventListener('railassist:booking:started', applyBookingEvent);
+    window.addEventListener('railassist:booking:completed', applyBookingEvent);
+    window.addEventListener('railassist:booking:updated', applyBookingEvent);
     window.addEventListener('railassist:sync', refresh);
     return () => {
       window.removeEventListener('railassist:booking:new', refresh);
       window.removeEventListener('railassist:booking:offer', refresh);
-      window.removeEventListener('railassist:booking:accepted', refresh);
+      window.removeEventListener('railassist:booking:accepted', applyBookingEvent);
       window.removeEventListener('railassist:booking:declined', refresh);
       window.removeEventListener('railassist:booking:removed', refresh);
-      window.removeEventListener('railassist:booking:cancelled', refresh);
-      window.removeEventListener('railassist:provider:arrived', refresh);
-      window.removeEventListener('railassist:booking:started', refresh);
-      window.removeEventListener('railassist:booking:completed', refresh);
-      window.removeEventListener('railassist:booking:updated', refresh);
+      window.removeEventListener('railassist:booking:cancelled', applyBookingEvent);
+      window.removeEventListener('railassist:provider:arrived', applyBookingEvent);
+      window.removeEventListener('railassist:booking:started', applyBookingEvent);
+      window.removeEventListener('railassist:booking:completed', applyBookingEvent);
+      window.removeEventListener('railassist:booking:updated', applyBookingEvent);
       window.removeEventListener('railassist:sync', refresh);
     };
   }, []);
@@ -306,7 +316,27 @@ function ProviderView({ user }) {
   useEffect(() => {
     fetchJobs();
     const refresh = () => fetchJobs();
-    window.addEventListener('railassist:booking:offer', refresh);
+    const applyOffer = event => {
+      const booking = event.detail?.booking;
+      if (!booking?.id) return;
+      const offeredJobs = booking.services
+        .filter(service => ['REQUESTED', 'SEARCHING'].includes(service.status) && !service.provider_id)
+        .map(service => ({
+          ...service,
+          booking_id: booking.id,
+          station: booking.station,
+          train_number: booking.train_number,
+          platform: booking.platform,
+          scheduled_at: booking.scheduled_at,
+          status: 'SEARCHING',
+          live: true,
+        }));
+      setJobs(current => [
+        ...current.filter(job => job.booking_id !== booking.id),
+        ...offeredJobs,
+      ]);
+    };
+    window.addEventListener('railassist:booking:offer', applyOffer);
     window.addEventListener('railassist:booking:accepted', refresh);
     window.addEventListener('railassist:booking:removed', refresh);
     window.addEventListener('railassist:booking:cancelled', refresh);
@@ -316,7 +346,7 @@ function ProviderView({ user }) {
     window.addEventListener('railassist:booking:updated', refresh);
     window.addEventListener('railassist:sync', refresh);
     return () => {
-      window.removeEventListener('railassist:booking:offer', refresh);
+      window.removeEventListener('railassist:booking:offer', applyOffer);
       window.removeEventListener('railassist:booking:accepted', refresh);
       window.removeEventListener('railassist:booking:removed', refresh);
       window.removeEventListener('railassist:booking:cancelled', refresh);

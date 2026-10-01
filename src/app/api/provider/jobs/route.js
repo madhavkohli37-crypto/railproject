@@ -8,6 +8,9 @@ export async function GET(req) {
   try {
     const db = await getDB();
     const provider = await db.collection('users').findOne({ id: decoded.userId });
+    if (!provider || provider.provider_status !== 'ONLINE' || provider.available === false) {
+      return NextResponse.json([]);
+    }
     const types = provider?.provider_types?.length ? provider.provider_types : [provider?.provider_type || 'PORTER'];
     const bookings = await db.collection('bookings').find({
       status: { $nin: ['CANCELLED', 'COMPLETED'] }, station: provider.station,

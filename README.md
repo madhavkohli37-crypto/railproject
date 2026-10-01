@@ -19,6 +19,7 @@ This project is an application-level prototype. Real railway deployment must fol
 - Porter, wheelchair, and meet-and-greet booking
 - Automatic provider assignment by service type, station, and availability
 - Real-time provider offers and booking status over authenticated Socket.IO
+- Online, available providers receive new offers directly over Socket.IO and see them rendered immediately without polling or a manual refresh
 - Instant porter requests open a live “Finding a porter” animation; accepted requests immediately show the porter’s name, provider ID, contact, rating, and start OTP
 - Provider ONLINE/OFFLINE status and service-type filtering
 - Atomic first-come acceptance with a server-generated single-use OTP
