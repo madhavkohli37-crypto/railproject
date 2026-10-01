@@ -13,6 +13,7 @@ const NAV_LINKS = [
   { href: '/bookings', label: 'Booking History', authOnly: true, roles: ['PASSENGER'] },
   { href: '/notifications', label: 'Notifications', authOnly: true },
   { href: '/activity', label: 'Account Activity', authOnly: true },
+  { href: '/profile', label: 'Account Settings', authOnly: true },
   { href: '/complaints', label: 'Complaint History', authOnly: true, roles: ['PASSENGER'] },
   { href: '/dashboard', label: 'My Dashboard', authOnly: true },
   { href: '/report', label: 'Report Activity', authOnly: true, roles: ['PASSENGER'] },

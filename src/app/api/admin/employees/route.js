@@ -10,15 +10,18 @@ export async function POST(req) {
   }
 
   try {
-    const { name, email, password, provider_type, station } = await req.json();
-    if (!name || !email || !password) {
-      return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
+    const { name, email, phone, password, provider_type, station } = await req.json();
+    if (!name || !phone || !password) {
+      return NextResponse.json({ error: 'Name, phone, and password are required' }, { status: 400 });
     }
 
     const db = await getDB();
-    const existing = await db.collection('users').findOne({ email: email.toLowerCase().trim() });
+    const normalizedEmail = email?.toLowerCase().trim() || null;
+    const existing = await db.collection('users').findOne({
+      $or: [{ phone: phone.trim() }, ...(normalizedEmail ? [{ email: normalizedEmail }] : [])],
+    });
     if (existing) {
-      return NextResponse.json({ error: 'Email already in use' }, { status: 409 });
+      return NextResponse.json({ error: 'Phone number or email already in use' }, { status: 409 });
     }
 
     const password_hash = await bcrypt.hash(password, 10);
@@ -27,7 +30,8 @@ export async function POST(req) {
     const newEmployee = {
       id: userId,
       name: name.trim(),
-      email: email.toLowerCase().trim(),
+      email: normalizedEmail,
+      phone: phone.trim(),
       password_hash,
       role: 'PROVIDER',
       provider_type: provider_type || 'PORTER',

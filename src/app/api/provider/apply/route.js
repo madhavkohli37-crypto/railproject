@@ -12,7 +12,7 @@ export async function POST(req) {
       experience_years, aadhar_number
     } = body;
 
-    if (!name || !email || !password || !phone || !provider_type || !station) {
+    if (!name || !password || !phone || !provider_type || !station) {
       return NextResponse.json({ error: 'All required fields must be filled.' }, { status: 400 });
     }
     if (password.length < 6) {
@@ -20,7 +20,10 @@ export async function POST(req) {
     }
 
     const db = await getDB();
-    const existing = await db.collection('users').findOne({ email: email.toLowerCase().trim() });
+    const normalizedEmail = email?.toLowerCase().trim() || null;
+    const existing = await db.collection('users').findOne({
+      $or: [{ phone: phone.trim() }, ...(normalizedEmail ? [{ email: normalizedEmail }] : [])],
+    });
     if (existing) {
       return NextResponse.json({ error: 'An account with this email already exists.' }, { status: 409 });
     }
@@ -31,7 +34,7 @@ export async function POST(req) {
     const application = {
       id: userId,
       name: name.trim(),
-      email: email.toLowerCase().trim(),
+      email: normalizedEmail,
       password_hash,
       phone: phone.trim(),
       role: 'PROVIDER',

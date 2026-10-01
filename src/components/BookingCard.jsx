@@ -100,6 +100,7 @@ export default function BookingCard({ booking, onCancel }) {
                     <div className="mt-1 text-gray-700 dark:text-gray-200">Name: {srv.provider_name}</div>
                     <div className="text-gray-600 dark:text-gray-300">Provider ID: {srv.provider_id}</div>
                     {srv.provider_phone && <div className="text-gray-600 dark:text-gray-300">Contact: {srv.provider_phone}</div>}
+                    {srv.provider_email && <div className="text-gray-600 dark:text-gray-300">Email: {srv.provider_email}</div>}
                     {srv.provider_rating != null && <div className="text-gray-600 dark:text-gray-300">Rating: ⭐ {srv.provider_rating}</div>}
                     {booking.otp_code && <div className="mt-2 font-bold tracking-widest text-blue-700 dark:text-blue-300">Start OTP: {booking.otp_code}</div>}
                   </div>

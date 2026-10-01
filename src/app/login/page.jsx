@@ -132,13 +132,13 @@ export default function LoginPage() {
             {/* Form */}
             <form onSubmit={handleSubmit} className="space-y-5">
               <div>
-                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Email Address</label>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Email, phone, or User ID</label>
                 <input
-                  type="email"
+                  type="text"
                   name="email"
                   value={form.email}
                   onChange={handleChange}
-                  placeholder="you@example.com"
+                  placeholder="you@example.com, phone, or U-42"
                   required
                   className="input-field"
                 />

@@ -14,9 +14,13 @@ export async function GET(req) {
       'services.provider_id': decoded.userId
     }).sort({ created_at: -1 }).toArray();
 
-    const jobs = bookings.map(b => {
+    const jobs = await Promise.all(bookings.map(async b => {
       const myService = b.services.find(s => s.provider_id === decoded.userId);
       const { otp_code, otp_hash, ...safeBooking } = b;
+      const passenger = await db.collection('users').findOne(
+        { id: b.user_id },
+        { projection: { _id: 0, name: 1, email: 1, phone: 1 } }
+      );
       return {
         booking_id: b.id,
         station: b.station,
@@ -26,10 +30,13 @@ export async function GET(req) {
         created_at: b.created_at,
         overall_status: b.status,
         passenger_id: b.user_id,
+        passenger_name: passenger.name || null,
+        passenger_email: passenger.email || null,
+        passenger_phone: passenger.phone || null,
         ...myService,
         booking: safeBooking
       };
-    });
+    }));
 
     return NextResponse.json(jobs);
   } catch (err) {

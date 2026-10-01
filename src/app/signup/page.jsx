@@ -87,26 +87,26 @@ export default function SignupPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Email Address <span className="text-red-400">*</span></label>
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Email Address <span className="text-gray-400">(optional)</span></label>
                   <input
                     type="email"
                     name="email"
                     value={form.email}
                     onChange={handleChange}
                     placeholder="you@example.com"
-                    required
                     className="input-field"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Phone Number</label>
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Phone Number <span className="text-red-400">*</span></label>
                   <input
                     type="tel"
                     name="phone"
                     value={form.phone}
                     onChange={handleChange}
                     placeholder="+91 98765 43210"
+                    required
                     className="input-field"
                   />
                 </div>

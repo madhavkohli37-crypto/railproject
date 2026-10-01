@@ -6,14 +6,20 @@ import { signToken } from '@/lib/auth';
 export async function POST(req) {
   try {
     const body = await req.json();
-    const { email, password } = body;
+    const { email, phone, user_id, password } = body;
 
-    if (!email || !password) {
-      return NextResponse.json({ error: 'Email and password are required' }, { status: 400 });
+    if ((!email && !phone && !user_id) || !password) {
+      return NextResponse.json({ error: 'Email, phone, or user ID and password are required' }, { status: 400 });
     }
 
     const db = await getDB();
-    const user = await db.collection('users').findOne({ email: email.toLowerCase().trim() });
+    const identifier = (email || phone || user_id || '').trim();
+    const query = identifier.includes('@')
+      ? { email: identifier.toLowerCase() }
+      : /^U-\d+$/i.test(identifier)
+        ? { id: Number(identifier.replace(/^U-/i, '')) }
+        : { phone: identifier };
+    const user = await db.collection('users').findOne(query);
     if (!user) {
       return NextResponse.json({ error: 'Invalid email or password' }, { status: 401 });
     }

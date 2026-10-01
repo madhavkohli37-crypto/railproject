@@ -419,6 +419,14 @@ function ProviderView({ user }) {
                 <div><span className="text-gray-500 dark:text-gray-400 block text-xs">Scheduled</span><span className="font-semibold dark:text-white">{job.scheduled_at ? new Date(job.scheduled_at).toLocaleString() : 'ASAP'}</span></div>
                 {job.type === 'PORTER' && <div><span className="text-gray-500 dark:text-gray-400 block text-xs">Bags</span><span className="font-semibold dark:text-white">{job.bags_count}</span></div>}
               </div>
+              {(job.passenger_name || job.passenger_phone || job.passenger_email || job.passenger?.name) && (
+                <div className="mb-4 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm dark:border-blue-800 dark:bg-blue-900/20">
+                  <p className="font-bold text-blue-900 dark:text-blue-200">Passenger contact</p>
+                  <p className="dark:text-gray-200">Name: {job.passenger_name || job.passenger?.name || '—'}</p>
+                  <p className="dark:text-gray-200">Phone: {job.passenger_phone || job.passenger?.phone || '—'}</p>
+                  <p className="dark:text-gray-200">Email: {job.passenger_email || job.passenger?.email || '—'}</p>
+                </div>
+              )}
               <div className="flex space-x-3 border-t border-gray-100 dark:border-gray-700 pt-4">
                 {job.status === 'SEARCHING' && (
                   <>
@@ -548,7 +556,7 @@ function AdminView({ currentUser }) {
 
   // Employee modal
   const [showEmployeeModal, setShowEmployeeModal] = useState(false);
-  const [employeeForm, setEmployeeForm] = useState({ name: '', email: '', password: '', provider_type: 'PORTER', station: 'New Delhi' });
+  const [employeeForm, setEmployeeForm] = useState({ name: '', email: '', phone: '', password: '', provider_type: 'PORTER', station: 'New Delhi' });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Settings (change own credentials)
@@ -613,7 +621,7 @@ function AdminView({ currentUser }) {
     try {
       await api.post('/admin/employees', employeeForm);
       setShowEmployeeModal(false);
-      setEmployeeForm({ name: '', email: '', password: '', provider_type: 'PORTER', station: 'New Delhi' });
+      setEmployeeForm({ name: '', email: '', phone: '', password: '', provider_type: 'PORTER', station: 'New Delhi' });
       fetchData();
     } catch (err) {
       alert(err.response?.data?.error || 'Failed to create employee');
@@ -1059,7 +1067,6 @@ function AdminView({ currentUser }) {
                 </label>
                 <input
                   type="password"
-                  required
                   placeholder="Verify your identity"
                   value={settingsForm.currentPassword}
                   onChange={e => setSettingsForm(f => ({ ...f, currentPassword: e.target.value }))}
@@ -1130,14 +1137,15 @@ function AdminView({ currentUser }) {
             <form onSubmit={handleCreateEmployee} className="space-y-4">
               {[
                 { label: 'Full Name', key: 'name', type: 'text' },
-                { label: 'Email', key: 'email', type: 'email' },
+                { label: 'Phone Number', key: 'phone', type: 'tel' },
+                { label: 'Email (optional)', key: 'email', type: 'email', optional: true },
                 { label: 'Password', key: 'password', type: 'password' },
-              ].map(({ label, key, type }) => (
+              ].map(({ label, key, type, optional }) => (
                 <div key={key}>
-                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">{label}</label>
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">{label}{!optional && <span className="text-red-400"> *</span>}</label>
                   <input
-                    required
                     type={type}
+                    required={!optional}
                     minLength={key === 'password' ? 6 : undefined}
                     value={employeeForm[key]}
                     onChange={e => setEmployeeForm({ ...employeeForm, [key]: e.target.value })}

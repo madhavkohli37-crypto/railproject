@@ -10,6 +10,11 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://railassist.vercel.a
 
 export const metadata = {
   metadataBase: new URL(siteUrl),
+  icons: {
+    icon: '/icon.svg',
+    shortcut: '/icon.svg',
+    apple: '/icon.svg',
+  },
   title: {
     default: 'RailAssist - India\'s Railway Assistance Platform',
     template: '%s | RailAssist',

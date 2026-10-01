@@ -14,8 +14,25 @@ export async function GET(req) {
       .find({ user_id: decoded.userId })
       .sort({ created_at: -1 })
       .toArray();
+    const enriched = await Promise.all(bookings.map(async booking => {
+      const services = await Promise.all(booking.services.map(async service => {
+        if (!service.provider_id || service.provider_phone) return service;
+        const provider = await db.collection('users').findOne(
+          { id: service.provider_id, role: 'PROVIDER' },
+          { projection: { _id: 0, name: 1, phone: 1, email: 1, rating: 1, average_rating: 1 } }
+        );
+        return provider ? {
+          ...service,
+          provider_name: service.provider_name || provider.name,
+          provider_phone: provider.phone || null,
+          provider_email: provider.email || null,
+          provider_rating: service.provider_rating ?? provider.rating ?? provider.average_rating ?? null,
+        } : service;
+      }));
+      return { ...booking, services };
+    }));
 
-    return NextResponse.json(bookings);
+    return NextResponse.json(enriched);
   } catch (err) {
     console.error('Error fetching bookings:', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

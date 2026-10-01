@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useBooking } from '@/context/BookingContext';
 import api from '@/lib/axiosInstance';
+import BookingCard from '@/components/BookingCard';
 
 export default function BookingPage() {
   const router = useRouter();
@@ -14,6 +15,7 @@ export default function BookingPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [submittedBooking, setSubmittedBooking] = useState(null);
   const priorityEligible = Number(user?.good_human_score ?? 0) > 700;
 
   const [form, setForm] = useState({
@@ -43,15 +45,28 @@ export default function BookingPage() {
   }, []);
 
   useEffect(() => {
-    const handleBookingUpdate = event => {
+    if (!submittedBooking) return undefined;
+    const handleBookingUpdate = async event => {
       const updated = event.detail?.booking;
-      if (updated?.id !== activeBooking?.id) return;
-      setActiveBooking(current => ({ ...(current || {}), ...updated }));
+      if (updated?.id !== submittedBooking.id) return;
+      if (updated.status === 'STARTED' || updated.status === 'IN_PROGRESS') {
+        router.push('/dashboard');
+        return;
+      }
+      try {
+        const response = await api.get('/bookings/my');
+        const current = response.data.find(booking => booking.id === submittedBooking.id);
+        setSubmittedBooking(current || updated);
+        setActiveBooking(current || updated);
+      } catch {
+        setSubmittedBooking(updated);
+        setActiveBooking(updated);
+      }
     };
     const events = ['accepted', 'updated', 'arrived', 'started', 'completed', 'cancelled'];
     events.forEach(event => window.addEventListener(`railassist:booking:${event}`, handleBookingUpdate));
     return () => events.forEach(event => window.removeEventListener(`railassist:booking:${event}`, handleBookingUpdate));
-  }, [activeBooking?.id, setActiveBooking]);
+  }, [submittedBooking, setActiveBooking]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -94,11 +109,32 @@ export default function BookingPage() {
         priority_requested: priorityEligible && form.priority_requested
       });
       setActiveBooking(response.data.booking);
+      setSubmittedBooking(response.data.booking);
       setSuccess('Request sent instantly. We are finding an available porter near you…');
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to create booking');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCancel = async (bookingId) => {
+    if (!window.confirm('Are you sure you want to cancel this booking?')) return;
+    try {
+      const response = await api.patch(`/bookings/${bookingId}/cancel`, {
+        reason: 'Cancelled by passenger from booking page',
+      });
+      const cancelled = {
+        ...submittedBooking,
+        ...(response.data.booking || {}),
+        status: 'CANCELLED',
+        cancellation_reason: 'Cancelled by passenger from booking page',
+      };
+      setSubmittedBooking(cancelled);
+      setActiveBooking(null);
+      setSuccess('Booking cancelled successfully.');
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to cancel booking');
     }
   };
 
@@ -125,7 +161,18 @@ export default function BookingPage() {
           {error && <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 p-4 rounded-xl mb-6">⚠️ {error}</div>}
           {success && <div className="bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-400 p-4 rounded-xl mb-6">🎉 {success}</div>}
 
-          <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
+          {submittedBooking && (
+            <div className="mb-6">
+              <BookingCard booking={submittedBooking} onCancel={handleCancel} />
+              <div className="mt-4 flex justify-center">
+                <button type="button" onClick={() => router.push('/bookings')} className="btn-outline">
+                  View bookings
+                </button>
+              </div>
+            </div>
+          )}
+
+          {!submittedBooking && <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
             <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Start a new assistance request</h2>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -214,7 +261,7 @@ export default function BookingPage() {
               </button>
             </div>
           </form>
-          </div>
+          </div>}
         </div>
       </div>
     </div>

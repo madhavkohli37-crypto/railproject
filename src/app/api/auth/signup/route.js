@@ -8,18 +8,20 @@ export async function POST(req) {
     const body = await req.json();
     const { name, email, password, phone } = body;
 
-    if (!name || !email || !password) {
-      return NextResponse.json({ error: 'Name, email and password are required' }, { status: 400 });
+    if (!name || !phone || !password) {
+      return NextResponse.json({ error: 'Name, phone number and password are required' }, { status: 400 });
     }
     if (password.length < 6) {
       return NextResponse.json({ error: 'Password must be at least 6 characters' }, { status: 400 });
     }
 
-    const normalizedEmail = email.toLowerCase().trim();
+    const normalizedEmail = email?.toLowerCase().trim() || null;
     const db = await getDB();
-    const existing = await db.collection('users').findOne({ email: normalizedEmail });
+    const existing = await db.collection('users').findOne({
+      $or: [{ phone: phone.trim() }, ...(normalizedEmail ? [{ email: normalizedEmail }] : [])],
+    });
     if (existing) {
-      return NextResponse.json({ error: 'This email is already registered. Please login.' }, { status: 409 });
+      return NextResponse.json({ error: 'This phone number or email is already registered.' }, { status: 409 });
     }
 
     const password_hash = await bcrypt.hash(password, 10);
@@ -30,7 +32,7 @@ export async function POST(req) {
       name: name.trim(),
       email: normalizedEmail,
       password_hash,
-      phone: phone || null,
+      phone: phone.trim(),
       role: 'PASSENGER',
       good_human_score: DEFAULT_GOOD_HUMAN_SCORE,
       reward_coins: 0,

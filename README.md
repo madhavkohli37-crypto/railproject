@@ -27,7 +27,9 @@ This project is an application-level prototype. Real railway deployment must fol
 - Passenger cancellation immediately removes the request from every matching provider portal
 - Booking history and cancellation
 - Dedicated navigation for active assistance, booking history, notifications, complaint history, and account activity
+- Account settings for every role with editable name and required phone number, optional email, and password changes
 - Provider/job status tracking
+- Assigned passengers and providers can securely view each other's name and required phone number; email is shown only when supplied
 - Passenger profile and Good Human Score display
 - Priority booking eligibility
 - Passenger benefits based on Good Human Score

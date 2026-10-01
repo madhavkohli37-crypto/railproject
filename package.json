@@ -4,7 +4,7 @@
   "description": "RailAssist - Railway Porter Booking App",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "node server.js",
     "build": "next build",
     "start": "node server.js"
   },

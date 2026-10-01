@@ -13,15 +13,22 @@ export async function GET(req) {
       status: { $nin: ['CANCELLED', 'COMPLETED'] }, station: provider.station,
       services: { $elemMatch: { type: { $in: types }, status: { $in: ['REQUESTED', 'SEARCHING'] }, provider_id: null } }
     }).sort({ priority_approved: -1, created_at: 1 }).toArray();
-    const jobs = bookings.map(booking => ({
+    const jobs = await Promise.all(bookings.map(async booking => {
+      const passenger = await db.collection('users').findOne(
+        { id: booking.user_id },
+        { projection: { _id: 0, name: 1, email: 1, phone: 1 } }
+      );
+      return {
       ...booking,
+      passenger: passenger || null,
       services: booking.services.filter(service =>
         types.includes(service.type)
         && ['REQUESTED', 'SEARCHING'].includes(service.status)
         && !service.provider_id
         && !(service.declined_provider_ids || []).includes(decoded.userId)
       ),
-    })).filter(booking => booking.services.length > 0);
+      };
+    })).then(items => items.filter(booking => booking.services.length > 0));
     return NextResponse.json(jobs);
   } catch (err) {
     console.error('Provider offers error:', err);

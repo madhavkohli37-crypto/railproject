@@ -140,8 +140,8 @@ export default function PorterApplyPage() {
                     <input type="tel" name="phone" required value={form.phone} onChange={handleChange} placeholder="10-digit mobile" maxLength={10} className="input-field" />
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Email Address <span className="text-red-400">*</span></label>
-                    <input type="email" name="email" required value={form.email} onChange={handleChange} placeholder="you@example.com" className="input-field" />
+                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Email Address <span className="text-gray-400">(optional)</span></label>
+                    <input type="email" name="email"  value={form.email} onChange={handleChange} placeholder="you@example.com" className="input-field" />
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Aadhaar Number</label>
