@@ -3,11 +3,14 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
+import { useAuth } from '@/context/AuthContext';
 import api from '@/lib/axiosInstance';
 import BookingCard from '@/components/BookingCard';
+import QuickChat from '@/components/QuickChat';
 
 export default function BookingDetailsPage() {
   const { id } = useParams();
+  const { user } = useAuth();
   const [booking, setBooking] = useState(null);
   const [error, setError] = useState('');
 
@@ -26,7 +29,8 @@ export default function BookingDetailsPage() {
       <Link href="/bookings" className="mb-5 inline-flex text-sm font-semibold text-blue-600 hover:underline">← Back to Booking History</Link>
       <h1 className="mb-2 text-3xl font-bold dark:text-white">Booking #{booking.id}</h1>
       <p className="mb-6 text-gray-500">Full booking details and service history.</p>
-      <BookingCard booking={booking} />
+      <BookingCard booking={booking} perspective={user?.role === 'PROVIDER' ? 'PROVIDER' : 'PASSENGER'} />
+      <div className="mt-4"><QuickChat bookingId={booking.id} disabled={['CANCELLED', 'COMPLETED', 'REJECTED_OR_CANCELLED'].includes(booking.status)} label="Open chat history" /></div>
     </section>
   );
 }

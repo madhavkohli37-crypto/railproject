@@ -455,7 +455,15 @@ function ProviderView({ user }) {
       ) : (
         <div className="grid gap-6">
           {jobs.map(job => (
-            <div key={job.booking_id} className="card hover:shadow-md transition-all">
+            <div
+              key={job.booking_id}
+              className="card cursor-pointer hover:shadow-md transition-all"
+              onClick={() => router.push(
+                ['CANCELLED', 'COMPLETED', 'REJECTED_OR_CANCELLED'].includes(job.status)
+                  ? `/bookings/${job.booking_id}`
+                  : `/active-booking/${job.booking_id}`
+              )}
+            >
               <div className="flex justify-between items-start mb-4">
                 <div>
                   <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold mb-2 ${
@@ -499,25 +507,26 @@ function ProviderView({ user }) {
               <div className="flex space-x-3 border-t border-gray-100 dark:border-gray-700 pt-4">
                 {job.status === 'SEARCHING' && (
                   <>
-                    <button onClick={() => updateStatus(job.booking_id, 'SEARCHING')} className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg font-semibold flex-1 active:scale-95">✅ Accept</button>
-                    <button onClick={async () => {
+                    <button onClick={event => { event.stopPropagation(); updateStatus(job.booking_id, 'SEARCHING'); }} className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg font-semibold flex-1 active:scale-95">✅ Accept</button>
+                    <button onClick={async event => {
+                      event.stopPropagation();
                       try {
                         await api.post(`/provider/job/${job.booking_id}/decline`, { service_type: job.type });
                         fetchJobs();
                       } catch (err) {
                         alert(err.response?.data?.error || 'Failed to decline request');
                       }
-                    }} className="bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 text-gray-800 dark:text-white px-5 py-2 rounded-lg font-semibold">❌ Decline</button>
+                    }} className="bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 text-gray-800 dark:text-white px-5 py-2 rounded-lg font-semibold" onClick={event => event.stopPropagation()}>❌ Decline</button>
                   </>
                 )}
                 {job.status === 'ACCEPTED' && (
-                  <button onClick={() => updateStatus(job.booking_id, 'ARRIVED')} className="bg-purple-500 hover:bg-purple-600 text-white px-6 py-2 rounded-lg font-semibold flex-1 active:scale-95">📍 Provider Arrived</button>
+                  <button onClick={event => { event.stopPropagation(); updateStatus(job.booking_id, 'ARRIVED'); }} className="bg-purple-500 hover:bg-purple-600 text-white px-6 py-2 rounded-lg font-semibold flex-1 active:scale-95">📍 Provider Arrived</button>
                 )}
                 {job.status === 'ARRIVED' && !otpJob && (
-                  <button onClick={() => { setOtpJob(job); setOtp(''); setOtpError(''); }} className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-2 rounded-lg font-semibold flex-1 active:scale-95">🔐 Verify OTP & Start</button>
+                  <button onClick={event => { event.stopPropagation(); setOtpJob(job); setOtp(''); setOtpError(''); }} className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-2 rounded-lg font-semibold flex-1 active:scale-95">🔐 Verify OTP & Start</button>
                 )}
                 {otpJob?.booking_id === job.booking_id && (
-                  <form onSubmit={verifyOtp} className="w-full rounded-xl border border-orange-200 bg-orange-50 p-4 dark:border-orange-800 dark:bg-orange-900/20">
+                  <form onClick={event => event.stopPropagation()} onSubmit={verifyOtp} className="w-full rounded-xl border border-orange-200 bg-orange-50 p-4 dark:border-orange-800 dark:bg-orange-900/20">
                     <div className="mb-3">
                       <h4 className="font-bold text-orange-900 dark:text-orange-200">Verify passenger OTP</h4>
                       <p className="text-xs text-orange-700 dark:text-orange-300">Ask the passenger for the 6-digit code shown on their booking.</p>
@@ -531,10 +540,10 @@ function ProviderView({ user }) {
                   </form>
                 )}
                 {job.status === 'STARTED' && (
-                  <button onClick={() => updateStatus(job.booking_id, 'COMPLETED')} className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-semibold flex-1 active:scale-95">🏁 Complete Service</button>
+                  <button onClick={event => { event.stopPropagation(); updateStatus(job.booking_id, 'COMPLETED'); }} className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-semibold flex-1 active:scale-95">🏁 Complete Service</button>
                 )}
                 {['ACCEPTED', 'ARRIVED', 'STARTED', 'IN_PROGRESS'].includes(job.status) && (
-                  <button onClick={() => setCancelJob(job)} className="bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 text-gray-800 dark:text-white px-4 py-2 rounded-lg font-semibold">Cancel</button>
+                  <button onClick={event => { event.stopPropagation(); setCancelJob(job); }} className="bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 text-gray-800 dark:text-white px-4 py-2 rounded-lg font-semibold">Cancel</button>
                 )}
                 {job.status === 'CANCELLED' && (
                   <div className="w-full rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-900/30 dark:text-red-300">
