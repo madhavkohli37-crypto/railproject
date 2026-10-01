@@ -15,7 +15,6 @@ export default function BookingPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const submittedBooking = activeBooking;
   const priorityEligible = Number(user?.good_human_score ?? 0) > 700;
 
   const [form, setForm] = useState({
@@ -145,9 +144,10 @@ export default function BookingPage() {
           {error && <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 p-4 rounded-xl mb-6">⚠️ {error}</div>}
           {success && <div className="bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-400 p-4 rounded-xl mb-6">🎉 {success}</div>}
 
-          {submittedBooking && (
+          {activeBooking && (
             <div className="mb-6">
-              <BookingCard booking={submittedBooking} onCancel={handleCancel} />
+              <p className="text-sm font-semibold text-blue-700 dark:text-blue-300 mb-2">Current active booking</p>
+              <BookingCard booking={activeBooking} onCancel={handleCancel} />
               <div className="mt-4 flex justify-center">
                 <button type="button" onClick={() => router.push('/dashboard')} className="btn-outline">
                   View all bookings
@@ -156,7 +156,9 @@ export default function BookingPage() {
             </div>
           )}
 
-          {!submittedBooking && <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Start a new assistance request</h2>
+          <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Station <span className="text-red-400">*</span></label>
@@ -242,7 +244,8 @@ export default function BookingPage() {
                 <span>{loading ? 'Processing booking...' : (success ? 'Confirmed!' : 'Confirm Request')}</span>
               </button>
             </div>
-          </form>}
+          </form>
+          </div>
         </div>
       </div>
     </div>
