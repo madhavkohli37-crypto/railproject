@@ -9,11 +9,7 @@ import { useTheme } from '@/context/ThemeContext';
 const NAV_LINKS = [
   { href: '/', label: 'Home' },
   { href: '/about', label: 'About' },
-  { href: '/book', label: 'Active Booking', authOnly: true, roles: ['PASSENGER'] },
-  { href: '/bookings', label: 'Booking History', authOnly: true, roles: ['PASSENGER'] },
-  { href: '/notifications', label: 'Notifications', authOnly: true },
-  { href: '/activity', label: 'Account Activity', authOnly: true },
-  { href: '/complaints', label: 'Complaint History', authOnly: true, roles: ['PASSENGER'] },
+  { href: '/book', label: 'Book Assistance', authOnly: true, roles: ['PASSENGER'] },
   { href: '/dashboard', label: 'My Dashboard', authOnly: true },
   { href: '/report', label: 'Report Activity', authOnly: true, roles: ['PASSENGER'] },
   { href: '/rewards', label: 'Rewards', authOnly: true, roles: ['PASSENGER'] },

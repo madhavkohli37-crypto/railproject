@@ -1,12 +1,11 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useBooking } from '@/context/BookingContext';
 import api from '@/lib/axiosInstance';
 import BookingCard from '@/components/BookingCard';
-import { CANCELLATION_REASONS } from '@/lib/bookingLifecycle';
 
 export default function BookingPage() {
   const router = useRouter();
@@ -17,8 +16,6 @@ export default function BookingPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const submittedBooking = activeBooking;
-  const submittedBookingId = submittedBooking?.id;
-  const submittedBookingIdRef = useRef(null);
   const priorityEligible = Number(user?.good_human_score ?? 0) > 700;
 
   const [form, setForm] = useState({
@@ -50,29 +47,13 @@ export default function BookingPage() {
   useEffect(() => {
     const handleBookingUpdate = (event) => {
       const updated = event.detail?.booking;
-      if (updated?.id !== submittedBookingIdRef.current) return;
+      if (updated?.id !== activeBooking?.id) return;
       setActiveBooking(current => ({ ...current, ...updated }));
     };
     const events = ['accepted', 'updated', 'arrived', 'started', 'completed', 'cancelled'];
     events.forEach(event => window.addEventListener(`railassist:booking:${event}`, handleBookingUpdate));
-    const handleSync = event => {
-      const synced = Array.isArray(event.detail)
-        ? event.detail.find(booking => booking.id === submittedBookingIdRef.current)
-        : null;
-      if (synced) setActiveBooking(synced);
-    };
-    window.addEventListener('railassist:sync', handleSync);
-    return () => {
-      events.forEach(event => window.removeEventListener(`railassist:booking:${event}`, handleBookingUpdate));
-      window.removeEventListener('railassist:sync', handleSync);
-    };
-  }, [setActiveBooking]);
-
-  useEffect(() => {
-    if (submittedBookingId) {
-      window.dispatchEvent(new CustomEvent('railassist:watch-booking', { detail: { bookingId: submittedBookingId } }));
-    }
-  }, [submittedBookingId]);
+    return () => events.forEach(event => window.removeEventListener(`railassist:booking:${event}`, handleBookingUpdate));
+  }, [activeBooking?.id, setActiveBooking]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -114,9 +95,7 @@ export default function BookingPage() {
         services,
         priority_requested: priorityEligible && form.priority_requested
       });
-      submittedBookingIdRef.current = response.data.booking.id;
       setActiveBooking(response.data.booking);
-      window.dispatchEvent(new CustomEvent('railassist:watch-booking', { detail: { bookingId: response.data.booking.id } }));
       setSuccess('Request sent instantly. We are finding an available porter near you…');
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to create booking');
@@ -127,22 +106,15 @@ export default function BookingPage() {
 
   const handleCancel = async (bookingId) => {
     if (!window.confirm('Are you sure you want to cancel this booking?')) return;
-    const menu = CANCELLATION_REASONS.map((item, index) => `${index + 1}. ${item.label}`).join('\n');
-    const option = CANCELLATION_REASONS[Number(window.prompt(`Why are you cancelling?\n${menu}`, '1')) - 1];
-    if (!option) return;
-    const description = option.code === 'OTHER' ? window.prompt('Describe the reason (required):') : option.label;
-    if (!description?.trim()) return;
     try {
       const response = await api.patch(`/bookings/${bookingId}/cancel`, {
-        reason_code: option.code,
-        description: description.trim(),
+        reason: 'Cancelled by passenger from booking page',
       });
       setActiveBooking(current => ({
         ...current,
         ...(response.data.booking || {}),
         status: 'CANCELLED',
-        cancellation_reason: option.code,
-        cancellation_description: description.trim(),
+        cancellation_reason: 'Cancelled by passenger from booking page',
       }));
       setSuccess('Booking cancelled successfully.');
     } catch (err) {

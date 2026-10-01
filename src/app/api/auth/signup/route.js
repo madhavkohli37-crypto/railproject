@@ -9,11 +9,7 @@ export async function POST(req) {
     const { name, email, password, phone } = body;
 
     if (!name || !email || !password) {
-      return NextResponse.json({ error: 'Name, email and phone are required' }, { status: 400 });
-    }
-    const normalizedPhone = typeof phone === 'string' ? phone.trim() : '';
-    if (!/^\+?[1-9]\d{7,14}$/.test(normalizedPhone.replace(/[\s()-]/g, ''))) {
-      return NextResponse.json({ error: 'A valid phone number is required (8–15 digits, optional country code).' }, { status: 400 });
+      return NextResponse.json({ error: 'Name, email and password are required' }, { status: 400 });
     }
     if (password.length < 6) {
       return NextResponse.json({ error: 'Password must be at least 6 characters' }, { status: 400 });
@@ -34,7 +30,7 @@ export async function POST(req) {
       name: name.trim(),
       email: normalizedEmail,
       password_hash,
-      phone: normalizedPhone,
+      phone: phone || null,
       role: 'PASSENGER',
       good_human_score: DEFAULT_GOOD_HUMAN_SCORE,
       reward_coins: 0,

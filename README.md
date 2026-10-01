@@ -19,7 +19,6 @@ This project is an application-level prototype. Real railway deployment must fol
 - Porter, wheelchair, and meet-and-greet booking
 - Automatic provider assignment by service type, station, and availability
 - Real-time provider offers and booking status over authenticated Socket.IO
-- Online, available providers receive new offers directly over Socket.IO and see them rendered immediately without polling or a manual refresh
 - Instant porter requests open a live “Finding a porter” animation; accepted requests immediately show the porter’s name, provider ID, contact, rating, and start OTP
 - Provider ONLINE/OFFLINE status and service-type filtering
 - Atomic first-come acceptance with a server-generated single-use OTP
@@ -237,9 +236,7 @@ The current application enforces the `>700` priority threshold. Benefits beyond 
 
 ## 🔔 Notifications
 
-Notifications are reserved for important user-facing alerts and are separate from booking history and account activity. The authenticated notification center supports Booking, Complaints, Account, and System filters, unread indicators, individual read actions, and mark-all-as-read.
-
-Important notifications include:
+Notifications are created for relevant complaint outcomes and account impacts, including:
 
 - Fine applied
 - Good Human Score reduction or reward
@@ -251,27 +248,7 @@ Important notifications include:
 - Appeal acceptance or denial
 - Private manager messages
 
-Notifications are scoped to the authenticated user and are delivered live through Socket.IO.
-
-## 🧭 Active bookings and history
-
-The active booking experience is backed by a shared booking context. It stays available at `/book` while a passenger is searching or receiving service and applies Socket.IO events directly to the visible card. Reconnect synchronization restores the latest authorized state without polling or a page refresh.
-
-Separate passenger sections are available for:
-
-- `/bookings` — Booking History, containing only service bookings.
-- `/complaints` — Complaint History and complaint status.
-- `/activity` — Account Activity from account audit events.
-- `/notifications` — Important alerts only.
-
-The custom server must be used for local development (`npm.cmd run dev`) so the authenticated Socket.IO endpoint is available.
-
-When the Next.js API is deployed on Vercel and `server.js` is deployed separately, configure these private variables on both sides of the realtime deployment:
-
-- `REALTIME_SERVER_URL` on Vercel: the Railway/Render server origin.
-- `REALTIME_INTERNAL_SECRET` on Vercel and Railway: the same long random value.
-
-The API uses this authenticated relay to publish booking events to the persistent Socket.IO process. `NEXT_PUBLIC_SOCKET_URL` remains the browser-facing realtime origin.
+Passengers can view notifications in the dashboard. Notifications are scoped to the authenticated passenger.
 
 ## 🆔 User identity and privacy
 
@@ -456,7 +433,7 @@ Build and start production:
 
 ```bash
 npm run build
-npm start         # Production server after npm run build
+npm start
 ```
 
 `npm start` runs `server.js`, which hosts Next.js and the Socket.IO endpoint at
@@ -466,19 +443,6 @@ are transient. Provider acceptance uses a MongoDB conditional update, so only
 one simultaneous provider can win. Serverless deployments that cannot keep a
 long-lived Node process should run Socket.IO separately; HTTP booking APIs
 remain available without realtime delivery.
-
-### Booking privacy and cancellation rules
-
-Signup requires a valid phone number (8–15 digits, with an optional country
-code). Phone numbers are not exposed by general APIs; they are returned only
-to the passenger and assigned provider after an active booking is accepted.
-Porter, wheelchair, and meet-and-greet bookings share the lifecycle
-`SEARCHING → ACCEPTED → ARRIVED → STARTED → COMPLETED`. MongoDB performs the
-first-accept operation atomically and Socket.IO broadcasts changes without
-polling. Passenger cancellation is terminal. Provider cancellation before
-service start returns that service to `SEARCHING` for rematching. Both sides
-must select a cancellation reason, and `Other` requires a description; actor,
-reason, description, timestamp, and service information are persisted.
 
 The first database connection creates the required collections and seeds the configured development accounts. See [`admin.md`](./admin.md) for credential and account-management details.
 

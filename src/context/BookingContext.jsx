@@ -5,6 +5,18 @@ import { useAuth } from '@/context/AuthContext';
 
 const BookingContext = createContext(null);
 const STORAGE_KEY = 'railassist.active-booking';
+const ACTIVE_STATUSES = new Set([
+  'REQUESTED',
+  'SEARCHING',
+  'ASSIGNED',
+  'PARTIALLY_ASSIGNED',
+  'ACCEPTED',
+  'ARRIVED',
+  'STARTED',
+  'IN_PROGRESS',
+]);
+
+const isActiveBooking = booking => Boolean(booking?.id && ACTIVE_STATUSES.has(booking.status));
 
 export function BookingProvider({ children }) {
   const { user } = useAuth();
@@ -19,9 +31,11 @@ export function BookingProvider({ children }) {
     }
     try {
       const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
-      if (stored?.user_id === user.id) {
+      if (stored?.user_id === user.id && isActiveBooking(stored)) {
         activeBookingRef.current = stored;
         setActiveBookingState(stored);
+      } else {
+        localStorage.removeItem(STORAGE_KEY);
       }
     } catch {
       localStorage.removeItem(STORAGE_KEY);
@@ -32,9 +46,10 @@ export function BookingProvider({ children }) {
     const booking = typeof bookingOrUpdater === 'function'
       ? bookingOrUpdater(activeBookingRef.current)
       : bookingOrUpdater;
-    activeBookingRef.current = booking || null;
-    setActiveBookingState(booking || null);
-    if (booking) localStorage.setItem(STORAGE_KEY, JSON.stringify(booking));
+    const nextBooking = isActiveBooking(booking) ? booking : null;
+    activeBookingRef.current = nextBooking;
+    setActiveBookingState(nextBooking);
+    if (nextBooking) localStorage.setItem(STORAGE_KEY, JSON.stringify(nextBooking));
     else localStorage.removeItem(STORAGE_KEY);
   }, []);
 

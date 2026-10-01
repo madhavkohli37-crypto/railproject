@@ -9,26 +9,13 @@ export default function RealtimeBridge() {
   useEffect(() => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
     if (!user || !token) return undefined;
-    const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || window.location.origin;
-    const socket = io(socketUrl, {
+    const socket = io(typeof window !== 'undefined' ? window.location.origin : undefined, {
       path: '/api/socket.io',
       auth: { token },
-      transports: ['websocket', 'polling'],
       reconnection: true,
       reconnectionAttempts: Infinity,
     });
-    const forward = event => payload => {
-      if (process.env.NODE_ENV !== 'production') {
-        console.debug(`[realtime] received ${event}`);
-      }
-      window.dispatchEvent(new CustomEvent(`railassist:${event}`, { detail: payload }));
-    };
-    socket.on('connect_error', error => {
-      window.dispatchEvent(new CustomEvent('railassist:socket-error', { detail: { message: error.message } }));
-    });
-    socket.on('disconnect', reason => {
-      window.dispatchEvent(new CustomEvent('railassist:disconnected', { detail: { reason } }));
-    });
+    const forward = event => payload => window.dispatchEvent(new CustomEvent(`railassist:${event}`, { detail: payload }));
     socket.on('booking:created', forward('booking:created'));
     socket.on('booking:new', forward('booking:new'));
     socket.on('booking:offer', forward('booking:offer'));
@@ -43,7 +30,6 @@ export default function RealtimeBridge() {
     socket.on('notification:new', forward('notification:new'));
     socket.on('connect', async () => {
       window.dispatchEvent(new CustomEvent('railassist:connected'));
-      window.dispatchEvent(new CustomEvent('railassist:socket-ready'));
       socket.emit('booking:sync', async result => {
         if (!result?.reload) return;
         const endpoint = user.role === 'PROVIDER' ? '/api/provider/dashboard' : '/api/bookings/my';
@@ -51,14 +37,7 @@ export default function RealtimeBridge() {
         if (response.ok) window.dispatchEvent(new CustomEvent('railassist:sync', { detail: await response.json() }));
       });
     });
-    const watchBooking = event => {
-      if (event.detail?.bookingId) socket.emit('booking:subscribe', event.detail.bookingId);
-    };
-    window.addEventListener('railassist:watch-booking', watchBooking);
-    return () => {
-      window.removeEventListener('railassist:watch-booking', watchBooking);
-      socket.disconnect();
-    };
+    return () => socket.disconnect();
   }, [user]);
   return null;
 }

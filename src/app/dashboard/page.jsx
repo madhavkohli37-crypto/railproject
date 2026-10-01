@@ -7,18 +7,6 @@ import { useAuth } from '@/context/AuthContext';
 import api from '@/lib/axiosInstance';
 import BookingCard from '@/components/BookingCard';
 import RewardCoinIcon from '@/components/RewardCoinIcon';
-import { CANCELLATION_REASONS } from '@/lib/bookingLifecycle';
-
-function chooseCancellation() {
-  const menu = CANCELLATION_REASONS.map((item, index) => `${index + 1}. ${item.label}`).join('\n');
-  const selected = Number(window.prompt(`Select a cancellation reason:\n${menu}`, '1'));
-  const option = CANCELLATION_REASONS[selected - 1];
-  if (!option) return null;
-  const description = option.code === 'OTHER'
-    ? window.prompt('Describe the reason (required):')
-    : option.label;
-  return description?.trim() ? { reason_code: option.code, description: description.trim() } : null;
-}
 
 function RewardsSummary() {
   const [state, setState] = useState(null);
@@ -45,10 +33,14 @@ function RewardsSummary() {
 // ─────────────────────────────────────────────────────────────────────────────
 function PassengerView({ user }) {
   const [bookings, setBookings] = useState([]);
+  const [complaints, setComplaints] = useState([]);
+  const [notifications, setNotifications] = useState([]);
+  const [complaintsLoading, setComplaintsLoading] = useState(true);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [cancelMsg, setCancelMsg] = useState('');
-  const [socketState, setSocketState] = useState('connecting');
+  const [appealReasons, setAppealReasons] = useState({});
+  const [appealLoading, setAppealLoading] = useState({});
 
   const fetchBookings = async () => {
     try {
@@ -64,67 +56,68 @@ function PassengerView({ user }) {
   useEffect(() => {
     fetchBookings();
     const refresh = () => fetchBookings();
-    const applyBookingEvent = event => {
-      const updated = event.detail?.booking;
-      if (!updated?.id) return;
-      setBookings(current => {
-        const exists = current.some(booking => booking.id === updated.id);
-        return exists
-          ? current.map(booking => booking.id === updated.id ? { ...booking, ...updated } : booking)
-          : [updated, ...current];
-      });
-    };
     window.addEventListener('railassist:booking:new', refresh);
     window.addEventListener('railassist:booking:offer', refresh);
-    window.addEventListener('railassist:booking:accepted', applyBookingEvent);
+    window.addEventListener('railassist:booking:accepted', refresh);
     window.addEventListener('railassist:booking:declined', refresh);
     window.addEventListener('railassist:booking:removed', refresh);
-    window.addEventListener('railassist:booking:cancelled', applyBookingEvent);
-    window.addEventListener('railassist:provider:arrived', applyBookingEvent);
-    window.addEventListener('railassist:booking:started', applyBookingEvent);
-    window.addEventListener('railassist:booking:completed', applyBookingEvent);
-    window.addEventListener('railassist:booking:updated', applyBookingEvent);
+    window.addEventListener('railassist:booking:cancelled', refresh);
+    window.addEventListener('railassist:provider:arrived', refresh);
+    window.addEventListener('railassist:booking:started', refresh);
+    window.addEventListener('railassist:booking:completed', refresh);
+    window.addEventListener('railassist:booking:updated', refresh);
     window.addEventListener('railassist:sync', refresh);
     return () => {
       window.removeEventListener('railassist:booking:new', refresh);
       window.removeEventListener('railassist:booking:offer', refresh);
-      window.removeEventListener('railassist:booking:accepted', applyBookingEvent);
+      window.removeEventListener('railassist:booking:accepted', refresh);
       window.removeEventListener('railassist:booking:declined', refresh);
       window.removeEventListener('railassist:booking:removed', refresh);
-      window.removeEventListener('railassist:booking:cancelled', applyBookingEvent);
-      window.removeEventListener('railassist:provider:arrived', applyBookingEvent);
-      window.removeEventListener('railassist:booking:started', applyBookingEvent);
-      window.removeEventListener('railassist:booking:completed', applyBookingEvent);
-      window.removeEventListener('railassist:booking:updated', applyBookingEvent);
+      window.removeEventListener('railassist:booking:cancelled', refresh);
+      window.removeEventListener('railassist:provider:arrived', refresh);
+      window.removeEventListener('railassist:booking:started', refresh);
+      window.removeEventListener('railassist:booking:completed', refresh);
+      window.removeEventListener('railassist:booking:updated', refresh);
       window.removeEventListener('railassist:sync', refresh);
     };
   }, []);
 
   useEffect(() => {
-    const connected = () => setSocketState('connected');
-    const disconnected = () => setSocketState('disconnected');
-    const failed = () => setSocketState('disconnected');
-    window.addEventListener('railassist:connected', connected);
-    window.addEventListener('railassist:disconnected', disconnected);
-    window.addEventListener('railassist:socket-error', failed);
-    return () => {
-      window.removeEventListener('railassist:connected', connected);
-      window.removeEventListener('railassist:disconnected', disconnected);
-      window.removeEventListener('railassist:socket-error', failed);
-    };
+    api.get('/complaints')
+      .then(res => setComplaints(res.data))
+      .catch(() => setError('Failed to load complaint history'))
+      .finally(() => setComplaintsLoading(false));
+  }, []);
+
+  useEffect(() => {
+    const fetchNotifications = () => api.get('/notifications').then(res => setNotifications(res.data)).catch(() => {});
+    fetchNotifications();
+    const refreshNotifications = () => fetchNotifications();
+    window.addEventListener('railassist:notification:new', refreshNotifications);
+    return () => window.removeEventListener('railassist:notification:new', refreshNotifications);
   }, []);
 
   const handleCancel = async (bookingId) => {
     if (!window.confirm('Are you sure you want to cancel this booking?')) return;
-    const cancellation = chooseCancellation();
-    if (!cancellation) return;
     try {
-      await api.patch(`/bookings/${bookingId}/cancel`, cancellation);
+      await api.patch(`/bookings/${bookingId}/cancel`);
       setCancelMsg('Booking cancelled successfully!');
       fetchBookings();
       setTimeout(() => setCancelMsg(''), 4000);
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to cancel booking');
+    }
+  };
+
+  const submitAppeal = async (complaint) => {
+    setAppealLoading(prev => ({ ...prev, [complaint.id]: true }));
+    try {
+      await api.post(`/complaints/${complaint.id}/appeal`, { reason: appealReasons[complaint.id] || '' });
+      setComplaints(items => items.map(item => item.id === complaint.id ? { ...item, appeal: { status: 'PENDING' } } : item));
+    } catch (err) {
+      setError(err.response?.data?.error || 'Unable to submit appeal');
+    } finally {
+      setAppealLoading(prev => ({ ...prev, [complaint.id]: false }));
     }
   };
 
@@ -148,9 +141,6 @@ function PassengerView({ user }) {
 
       {cancelMsg && <div className="bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-400 px-4 py-3 rounded-lg text-sm">✅ {cancelMsg}</div>}
       {error && <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded-lg text-sm">⚠️ {error}</div>}
-      <div className={`text-xs ${socketState === 'connected' ? 'text-green-600' : 'text-amber-600'}`}>
-        {socketState === 'connected' ? '● Live updates connected' : '○ Reconnecting to live updates…'}
-      </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
         {[
@@ -183,25 +173,92 @@ function PassengerView({ user }) {
       <RewardsSummary />
 
       <div>
+        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-5">🔔 Account Notifications</h2>
+        {notifications.length === 0 ? (
+          <div className="card text-sm text-gray-500 dark:text-gray-400">No account-impact notifications yet.</div>
+        ) : (
+          <div className="space-y-3">{notifications.map(notification => (
+            <div key={notification.id} className="card border-l-4 border-blue-500">
+              <div className="flex justify-between gap-3"><h3 className="font-bold dark:text-white">{notification.title}</h3><span className="text-xs text-gray-500">{new Date(notification.created_at).toLocaleString('en-IN')}</span></div>
+              <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">{notification.message}</p>
+            </div>
+          ))}</div>
+        )}
+      </div>
+
+      <div>
         <div className="flex items-center justify-between mb-5">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white">🧳 Active Bookings</h2>
-          <div className="flex gap-3">
-            <Link href="/bookings" className="text-sm text-blue-600 hover:text-blue-700 font-semibold">Booking History</Link>
-            <Link href="/book" className="text-sm text-orange-500 hover:text-orange-600 font-semibold">+ New Request</Link>
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white">📣 My Complaint Logs</h2>
+          <Link href="/report" className="text-sm text-orange-500 hover:text-orange-600 font-semibold">+ New Report</Link>
+        </div>
+        {complaintsLoading ? (
+          <div className="card animate-pulse h-32" />
+        ) : complaints.length === 0 ? (
+          <div className="card text-center py-8">
+            <p className="text-gray-500 dark:text-gray-400 mb-4">You have not submitted any activity reports.</p>
+            <Link href="/report" className="btn-outline text-sm">Report an Activity</Link>
           </div>
+        ) : (
+          <div className="space-y-4">
+            {complaints.map(complaint => (
+              <div key={complaint.id} className="card">
+                <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
+                  <div>
+                    <h3 className="font-bold text-gray-900 dark:text-white">Report #{complaint.id} · {complaint.category}</h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      {complaint.station} · {new Date(complaint.created_at).toLocaleString('en-IN')}
+                    </p>
+                  </div>
+                  <span className="badge-info">{complaint.status.replace(/_/g, ' ')}</span>
+                </div>
+                <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{complaint.description}</p>
+                <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-3 text-xs text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3">
+                  <div><span className="block text-gray-400">Occurred</span>{complaint.occurred_at ? new Date(complaint.occurred_at).toLocaleString('en-IN') : '—'}</div>
+                  <div><span className="block text-gray-400">Train</span>{complaint.train_number || '—'}</div>
+                  <div><span className="block text-gray-400">Platform / coach</span>{complaint.platform || '—'}</div>
+                  <div><span className="block text-gray-400">Location</span>{complaint.station}</div>
+                </div>
+                {complaint.images?.length > 0 && <div className="flex gap-2 flex-wrap mt-3">{complaint.images.map((image, index) => <a key={index} href={image.data} target="_blank" rel="noreferrer"><img src={image.data} alt={`Complaint evidence ${index + 1}`} className="w-16 h-16 object-cover rounded border" /></a>)}</div>}
+                {complaint.resolution && (
+                  <div className="mt-3 rounded-lg bg-gray-50 dark:bg-gray-700/50 p-3 text-sm text-gray-600 dark:text-gray-300">
+                    <strong>{complaint.resolution.accused_user_id === user?.id ? 'Decision against your account:' : 'Review outcome:'}</strong> {complaint.resolution.action.replace(/_/g, ' ')}
+                    {complaint.resolution.accused_user_id === user?.id && <div className="mt-1">Fine: ₹{complaint.resolution.fine_amount || 0} · Good Human Score penalty: {complaint.resolution.score_penalty || 0}</div>}
+                    {complaint.resolution.notes && <div className="mt-1"><strong>Manager explanation:</strong> {complaint.resolution.notes}</div>}
+                    {complaint.resolution.accused_user_id === user?.id && complaint.resolution.accused_message && <div className="mt-1"><strong>Message from complaint manager:</strong> {complaint.resolution.accused_message}</div>}
+                    {complaint.reporter_id === user?.id && complaint.resolution.reporter_message && <div className="mt-1"><strong>Message from complaint manager:</strong> {complaint.resolution.reporter_message}</div>}
+                    {complaint.appeal && <div className="mt-1"><strong>Appeal:</strong> {complaint.appeal.status}{complaint.appeal.review_notes ? ` — ${complaint.appeal.review_notes}` : ''}</div>}
+                  </div>
+                )}
+                {complaint.resolution?.accused_user_id === user?.id && complaint.status === 'UPHELD' && complaint.appeal?.status !== 'PENDING' && (
+                  <div className="mt-3 border-t pt-3">
+                    <p className="text-sm font-semibold dark:text-white mb-2">Object to this decision</p>
+                    <textarea className="input-field w-full" rows="2" minLength="10" placeholder="Explain why you believe this decision should be reviewed (at least 10 characters)." value={appealReasons[complaint.id] || ''} onChange={e => setAppealReasons(prev => ({ ...prev, [complaint.id]: e.target.value }))} />
+                    <button disabled={appealLoading[complaint.id]} onClick={() => submitAppeal(complaint)} className="btn-outline mt-2">{appealLoading[complaint.id] ? 'Submitting...' : 'Submit appeal for re-review'}</button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div>
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white">🧳 My Bookings</h2>
+          <Link href="/book" className="text-sm text-orange-500 hover:text-orange-600 font-semibold">+ New Request</Link>
         </div>
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">{[1,2].map(i => <div key={i} className="card animate-pulse h-48" />)}</div>
-        ) : activeBookings.length === 0 ? (
+        ) : bookings.length === 0 ? (
           <div className="card text-center py-16">
             <div className="text-6xl mb-4">🧳</div>
-            <h3 className="text-xl font-bold dark:text-white mb-2">No active bookings.</h3>
-            <p className="text-gray-500 dark:text-gray-400 mb-6">Your completed and cancelled bookings are in Booking History.</p>
+            <h3 className="text-xl font-bold dark:text-white mb-2">No bookings yet.</h3>
+            <p className="text-gray-500 dark:text-gray-400 mb-6">Book your first provider for your upcoming journey!</p>
             <Link href="/book" className="btn-primary inline-block">Request Assistance</Link>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            {activeBookings.map(booking => <BookingCard key={booking.id} booking={booking} onCancel={handleCancel} />)}
+            {bookings.map(booking => <BookingCard key={booking.id} booking={booking} onCancel={handleCancel} />)}
           </div>
         )}
       </div>
@@ -248,85 +305,28 @@ function ProviderView({ user }) {
 
   useEffect(() => {
     fetchJobs();
-    const applyOffer = event => {
-      const booking = event.detail?.booking;
-      if (!booking?.id) return;
-      const offeredJobs = booking.services
-        .filter(service => ['REQUESTED', 'SEARCHING'].includes(service.status) && !service.provider_id)
-        .map(service => ({
-          ...service,
-          booking_id: booking.id,
-          station: booking.station,
-          train_number: booking.train_number,
-          platform: booking.platform,
-          scheduled_at: booking.scheduled_at,
-          status: 'SEARCHING',
-          live: true,
-        }));
-      setJobs(current => [
-        ...current.filter(job => job.booking_id !== booking.id),
-        ...offeredJobs,
-      ]);
-    };
-    const applyBookingState = event => {
-      const booking = event.detail?.booking;
-      if (!booking?.id) return;
-      const assignedJobs = booking.services
-        .filter(service => service.provider_id === user?.id)
-        .map(service => ({
-          ...service,
-          booking_id: booking.id,
-          station: booking.station,
-          train_number: booking.train_number,
-          platform: booking.platform,
-          scheduled_at: booking.scheduled_at,
-          live: true,
-        }));
-      setJobs(current => [
-        ...current.filter(job => job.booking_id !== booking.id),
-        ...assignedJobs,
-      ]);
-    };
-    const removeBooking = event => {
-      const bookingId = event.detail?.booking_id;
-      if (!bookingId) return;
-      setJobs(current => current.filter(job => job.booking_id !== bookingId));
-    };
-    const applyCancellation = event => {
-      const booking = event.detail?.booking;
-      if (!booking?.id) return;
-      setJobs(current => current.map(job => job.booking_id === booking.id
-        ? {
-          ...job,
-          status: 'CANCELLED',
-          cancellation_reason: booking.cancellation_reason,
-          cancellation_description: booking.cancellation_description,
-          cancelled_by: booking.cancelled_by,
-          cancelled_at: booking.cancelled_at,
-        }
-        : job));
-    };
-    window.addEventListener('railassist:booking:offer', applyOffer);
-    window.addEventListener('railassist:booking:accepted', applyBookingState);
-    window.addEventListener('railassist:booking:removed', removeBooking);
-    window.addEventListener('railassist:booking:cancelled', applyCancellation);
-    window.addEventListener('railassist:provider:arrived', applyBookingState);
-    window.addEventListener('railassist:booking:started', applyBookingState);
-    window.addEventListener('railassist:booking:completed', applyBookingState);
-    window.addEventListener('railassist:booking:updated', applyBookingState);
-    window.addEventListener('railassist:sync', fetchJobs);
+    const refresh = () => fetchJobs();
+    window.addEventListener('railassist:booking:offer', refresh);
+    window.addEventListener('railassist:booking:accepted', refresh);
+    window.addEventListener('railassist:booking:removed', refresh);
+    window.addEventListener('railassist:booking:cancelled', refresh);
+    window.addEventListener('railassist:provider:arrived', refresh);
+    window.addEventListener('railassist:booking:started', refresh);
+    window.addEventListener('railassist:booking:completed', refresh);
+    window.addEventListener('railassist:booking:updated', refresh);
+    window.addEventListener('railassist:sync', refresh);
     return () => {
-      window.removeEventListener('railassist:booking:offer', applyOffer);
-      window.removeEventListener('railassist:booking:accepted', applyBookingState);
-      window.removeEventListener('railassist:booking:removed', removeBooking);
-      window.removeEventListener('railassist:booking:cancelled', applyCancellation);
-      window.removeEventListener('railassist:provider:arrived', applyBookingState);
-      window.removeEventListener('railassist:booking:started', applyBookingState);
-      window.removeEventListener('railassist:booking:completed', applyBookingState);
-      window.removeEventListener('railassist:booking:updated', applyBookingState);
-      window.removeEventListener('railassist:sync', fetchJobs);
+      window.removeEventListener('railassist:booking:offer', refresh);
+      window.removeEventListener('railassist:booking:accepted', refresh);
+      window.removeEventListener('railassist:booking:removed', refresh);
+      window.removeEventListener('railassist:booking:cancelled', refresh);
+      window.removeEventListener('railassist:provider:arrived', refresh);
+      window.removeEventListener('railassist:booking:started', refresh);
+      window.removeEventListener('railassist:booking:completed', refresh);
+      window.removeEventListener('railassist:booking:updated', refresh);
+      window.removeEventListener('railassist:sync', refresh);
     };
-  }, [user?.id]);
+  }, []);
 
   const toggleAvailability = async () => {
     try {
@@ -344,7 +344,7 @@ function ProviderView({ user }) {
         await api.patch(`/provider/job/${bookingId}/status`, {
           status,
           ...(status === 'STARTED' ? { otp: value } : {}),
-          ...(status === 'CANCELLED_BY_PROVIDER' ? { reason_code: value.reason_code, description: value.description } : {}),
+          ...(status === 'CANCELLED_BY_PROVIDER' ? { reason: value } : {}),
         });
       }
       fetchJobs();
@@ -417,12 +417,6 @@ function ProviderView({ user }) {
                 {job.type === 'PORTER' && <div><span className="text-gray-500 dark:text-gray-400 block text-xs">Bags</span><span className="font-semibold dark:text-white">{job.bags_count}</span></div>}
               </div>
               <div className="flex space-x-3 border-t border-gray-100 dark:border-gray-700 pt-4">
-                {job.status === 'CANCELLED' && (
-                  <div className="w-full rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-900/20 dark:text-red-300">
-                    <strong>Request cancelled {job.cancelled_by === 'PROVIDER' ? 'by provider' : 'by passenger'}</strong>
-                    {job.cancellation_description && <div>Reason: {job.cancellation_description}</div>}
-                  </div>
-                )}
                 {job.status === 'SEARCHING' && (
                   <>
                     <button onClick={() => updateStatus(job.booking_id, 'SEARCHING')} className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg font-semibold flex-1 active:scale-95">✅ Accept</button>
@@ -450,8 +444,8 @@ function ProviderView({ user }) {
                 )}
                 {['ACCEPTED', 'ARRIVED'].includes(job.status) && (
                   <button onClick={() => {
-                    const cancellation = chooseCancellation();
-                    if (cancellation) updateStatus(job.booking_id, 'CANCELLED_BY_PROVIDER', cancellation);
+                    const reason = window.prompt('Why are you cancelling this booking?');
+                    if (reason) updateStatus(job.booking_id, 'CANCELLED_BY_PROVIDER', reason);
                   }} className="bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 text-gray-800 dark:text-white px-4 py-2 rounded-lg font-semibold">Cancel</button>
                 )}
                 {job.status === 'COMPLETED' && (
