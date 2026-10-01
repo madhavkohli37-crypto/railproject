@@ -78,6 +78,7 @@ The UI and API are served by the same Next.js process. API requests use the `/ap
 - `/api/auth/*` — signup, login, and session verification
 - `/api/stations` — station lookup
 - `/api/bookings/*` — create, list, and cancel bookings
+- `/api/auth/profile` — update account details and optional validated profile pictures
 - `/api/provider/*` — applications, availability, dashboard, and job updates
 - `/api/admin/*` — administration, employees, applications, and settings
 - `/api/complaints` — submit and review incident complaints; passengers can also retrieve their own complaint logs
@@ -85,6 +86,10 @@ The UI and API are served by the same Next.js process. API requests use the `/ap
 ## Good Human Score and Priority Booking
 
 Passengers start with a Good Human Score of 400 on a 0–1000 scale. Managers and administrators can uphold genuine complaints against an identified passenger, apply a category-based fine and score penalty, reject complaints as spam (reducing the reporter by 25), dismiss complaints for insufficient evidence, or request more information. A score above 700 makes a passenger eligible to request premium priority booking; only those passengers see that option. Genuine reports reward the reporter with +5. The booking stores both the request and approval decision.
+
+### Profile pictures and authorized contact
+
+Profile pictures are optional and accept JPG/JPEG, PNG, and WEBP data URLs up to the configured request limit. The UI uses a initials-based avatar when no image exists. Pictures and contact details are exposed only on an assigned booking to the other participant; phone numbers are rendered as call links. Provider assignment cards animate in after the realtime state update without delaying booking state synchronization.
 
 Every account receives a unique display user ID such as `U-42`. Complaint queues show the reporter's user ID instead of their name, and the complaint API strips stored legacy reporter names from responses.
 

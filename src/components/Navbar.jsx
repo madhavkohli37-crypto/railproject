@@ -11,6 +11,7 @@ const NAV_LINKS = [
   { href: '/about', label: 'About' },
   { href: '/book', label: 'Book Assistance', authOnly: true, roles: ['PASSENGER'] },
   { href: '/bookings', label: 'Booking History', authOnly: true, roles: ['PASSENGER'] },
+  { href: '/active-booking', label: 'Active Booking', authOnly: true },
   { href: '/notifications', label: 'Notifications', authOnly: true },
   { href: '/activity', label: 'Account Activity', authOnly: true },
   { href: '/suggestions', label: 'Suggest Changes', authOnly: true },

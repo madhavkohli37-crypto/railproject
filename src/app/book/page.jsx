@@ -52,6 +52,11 @@ export default function BookingPage() {
     const handleBookingUpdate = async event => {
       const updated = event.detail?.booking;
       if (updated?.id !== submittedBooking.id) return;
+      if (updated.status === 'ACCEPTED') {
+        setActiveBooking(updated);
+        router.push(`/active-booking/${updated.id}`);
+        return;
+      }
       if (updated.status === 'STARTED' || updated.status === 'IN_PROGRESS') {
         router.push('/dashboard');
         return;

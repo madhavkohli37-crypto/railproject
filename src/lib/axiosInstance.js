@@ -21,7 +21,10 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (typeof window !== 'undefined') {
-      if (error.response?.status === 401 || error.response?.status === 403) {
+      // A 403 is a normal authorization/business-rule response (for example,
+      // trying to update a booking that was just cancelled). It must not log
+      // the user out. Only an invalid or expired session token is a 401.
+      if (error.response?.status === 401) {
         if (!error.config.url.includes('/auth/login')) {
           localStorage.removeItem('token');
           localStorage.removeItem('user');

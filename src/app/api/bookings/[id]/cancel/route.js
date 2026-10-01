@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getDB } from '@/lib/db';
 import { verifyToken } from '@/lib/auth';
-import { emitBooking, emitRealtime, notifyUsers } from '@/lib/realtime';
+import { emitBooking, notifyUsers } from '@/lib/realtime';
 
 export async function PATCH(req, { params }) {
   const decoded = verifyToken(req);
@@ -53,8 +53,7 @@ export async function PATCH(req, { params }) {
         { $set: { available: true, provider_status: 'ONLINE' } }
       );
     }
-    emitBooking(updated);
-    emitRealtime('booking:cancelled', { booking: updated }, [`booking:${bookingId}`, `user:${decoded.userId}`, ...providerIds.map(id => `provider:${id}`)]);
+    emitBooking(updated, 'booking:cancelled');
     const serviceTypes = [...new Set(booking.services.map(service => service.type).filter(Boolean))];
     const eligibleProviders = await db.collection('users').find({
       role: 'PROVIDER',

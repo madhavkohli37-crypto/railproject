@@ -1,6 +1,7 @@
 'use client';
 
-export default function BookingCard({ booking, onCancel }) {
+export default function BookingCard({ booking, onCancel, onOpen, perspective = 'PASSENGER' }) {
+  const initials = name => (name || '?').split(/\s+/).map(part => part[0]).join('').slice(0, 2).toUpperCase();
   const statusStyles = {
     REQUESTED: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 border border-yellow-200 dark:border-yellow-800',
     SEARCHING: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800',
@@ -42,7 +43,7 @@ export default function BookingCard({ booking, onCancel }) {
   const searching = ['REQUESTED', 'SEARCHING'].includes(booking.status);
 
   return (
-    <div className="card shadow-sm hover:shadow-md transition-all">
+    <div className={`card shadow-sm hover:shadow-md transition-all ${onOpen ? 'cursor-pointer' : ''}`} onClick={onOpen}>
       <div className="flex items-start justify-between mb-4">
         <div>
           <h3 className="font-bold text-gray-900 dark:text-white text-lg">Booking #{booking.id}</h3>
@@ -94,19 +95,27 @@ export default function BookingCard({ booking, onCancel }) {
               <div>
                 <span className="font-semibold text-gray-800 dark:text-gray-200">{srv.type}</span>
                 {srv.bags_count && <span className="text-gray-500 dark:text-gray-400 ml-1">({srv.bags_count} bags)</span>}
-                {srv.provider_name ? (
-                  <div className="mt-2 rounded-lg border border-green-200 bg-green-50 p-2 text-xs dark:border-green-800 dark:bg-green-900/20">
-                    <div className="font-bold text-green-800 dark:text-green-300">✅ Porter found</div>
-                    <div className="mt-1 text-gray-700 dark:text-gray-200">Name: {srv.provider_name}</div>
+                {srv.provider_name && perspective === 'PASSENGER' ? (
+                  <div className="provider-assigned-card mt-2 rounded-xl border border-green-200 bg-green-50 p-3 text-xs dark:border-green-800 dark:bg-green-900/20">
+                    <div className="mb-2 font-bold text-green-800 dark:text-green-300">✅ Provider found</div>
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-blue-100 text-sm font-bold text-blue-700 dark:bg-blue-900/50 dark:text-blue-200">
+                        {srv.provider_profile_picture ? <img src={srv.provider_profile_picture} alt={`${srv.provider_name} profile`} className="h-full w-full object-cover" /> : initials(srv.provider_name)}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="font-bold text-gray-800 dark:text-gray-100">{srv.provider_name}</div>
+                        {srv.provider_rating != null && <div className="text-gray-600 dark:text-gray-300">⭐ {srv.provider_rating} · {srv.type.replace(/_/g, ' ')}</div>}
+                      </div>
+                    </div>
                     <div className="text-gray-600 dark:text-gray-300">Provider ID: {srv.provider_id}</div>
-                    {srv.provider_phone && <div className="text-gray-600 dark:text-gray-300">Contact: {srv.provider_phone}</div>}
+                    {srv.provider_phone && <a href={`tel:${srv.provider_phone}`} className="block text-blue-700 hover:underline dark:text-blue-300">📞 {srv.provider_phone} · Call provider</a>}
                     {srv.provider_email && <div className="text-gray-600 dark:text-gray-300">Email: {srv.provider_email}</div>}
-                    {srv.provider_rating != null && <div className="text-gray-600 dark:text-gray-300">Rating: ⭐ {srv.provider_rating}</div>}
+                    <div className="mt-1 font-semibold text-green-800 dark:text-green-300">Provider is on the way</div>
                     {booking.otp_code && <div className="mt-2 font-bold tracking-widest text-blue-700 dark:text-blue-300">Start OTP: {booking.otp_code}</div>}
                   </div>
                 ) : (
                   <div className="text-xs text-yellow-600 dark:text-yellow-400 font-medium mt-0.5">
-                    Finding provider...
+                    {perspective === 'PROVIDER' ? 'Passenger details are shown below.' : 'Finding provider...'}
                     {srv.declined_count > 0 && ` ${srv.declined_count} provider${srv.declined_count === 1 ? '' : 's'} declined so far.`}
                   </div>
                 )}
@@ -119,6 +128,21 @@ export default function BookingCard({ booking, onCancel }) {
           ))}
         </div>
       </div>
+      {perspective === 'PROVIDER' && booking.passenger && (
+        <div className="mb-4 rounded-xl border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-900/20">
+          <p className="mb-3 font-bold text-blue-900 dark:text-blue-200">Passenger details</p>
+          <div className="flex items-center gap-3">
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full bg-blue-100 text-lg font-bold text-blue-700 dark:bg-blue-900/50 dark:text-blue-200">
+              {booking.passenger.profile_picture ? <img src={booking.passenger.profile_picture} alt={`${booking.passenger.name || 'Passenger'} profile`} className="h-full w-full object-cover" /> : (booking.passenger.name || 'P').split(/\s+/).map(part => part[0]).join('').slice(0, 2).toUpperCase()}
+            </div>
+            <div className="min-w-0 text-sm">
+              <p className="font-bold text-gray-900 dark:text-white">{booking.passenger.name || 'Passenger'}</p>
+              {booking.passenger.phone && <a href={`tel:${booking.passenger.phone}`} className="text-blue-700 hover:underline dark:text-blue-300">📞 {booking.passenger.phone} · Call passenger</a>}
+              {booking.passenger.email && <p className="text-gray-600 dark:text-gray-300">{booking.passenger.email}</p>}
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="border-t border-gray-100 dark:border-gray-700 pt-3 flex items-center justify-between">
         <div>
@@ -127,7 +151,7 @@ export default function BookingCard({ booking, onCancel }) {
         </div>
         {canCancel && (
           <button
-            onClick={() => onCancel(booking.id)}
+            onClick={event => { event.stopPropagation(); onCancel(booking.id); }}
             className="text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/30 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors border border-red-200 dark:border-red-800 hover:border-red-400 dark:hover:border-red-600"
           >
             Cancel Booking

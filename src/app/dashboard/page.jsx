@@ -33,6 +33,7 @@ function RewardsSummary() {
 // 1. PASSENGER VIEW
 // ─────────────────────────────────────────────────────────────────────────────
 function PassengerView({ user }) {
+  const router = useRouter();
   const [bookings, setBookings] = useState([]);
   const [complaints, setComplaints] = useState([]);
   const [notifications, setNotifications] = useState([]);
@@ -58,7 +59,10 @@ function PassengerView({ user }) {
 
   useEffect(() => {
     fetchBookings();
-    const refresh = () => fetchBookings();
+    const refresh = event => {
+      fetchBookings();
+      if (event?.detail?.booking?.status === 'ACCEPTED') router.push(`/active-booking/${event.detail.booking.id}`);
+    };
     window.addEventListener('railassist:booking:new', refresh);
     window.addEventListener('railassist:booking:offer', refresh);
     window.addEventListener('railassist:booking:accepted', refresh);
@@ -270,7 +274,7 @@ function PassengerView({ user }) {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            {activeBookings.map(booking => <BookingCard key={booking.id} booking={booking} onCancel={handleCancel} />)}
+            {activeBookings.map(booking => <BookingCard key={booking.id} booking={booking} onCancel={handleCancel} onOpen={() => router.push(`/active-booking/${booking.id}`)} />)}
           </div>
         )}
       </div>
@@ -283,6 +287,7 @@ function PassengerView({ user }) {
 // 2. PROVIDER VIEW (Employee Portal)
 // ─────────────────────────────────────────────────────────────────────────────
 function ProviderView({ user }) {
+  const router = useRouter();
   const [jobs, setJobs] = useState([]);
   const [available, setAvailable] = useState(user?.provider_status !== 'OFFLINE' && user?.available !== false);
   const [loading, setLoading] = useState(true);
@@ -308,9 +313,15 @@ function ProviderView({ user }) {
           scheduled_at: booking.scheduled_at,
           status: 'SEARCHING',
           live: true,
+          isOpenRequest: true,
         })))
         .filter(job => !assignedIds.has(job.booking_id));
-      setJobs([...assignedJobs, ...openJobs]);
+      const orderedJobs = [...assignedJobs.map(job => ({ ...job, isOpenRequest: false })), ...openJobs]
+        .sort((a, b) => {
+          if (a.isOpenRequest !== b.isOpenRequest) return a.isOpenRequest ? -1 : 1;
+          return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+        });
+      setJobs(orderedJobs);
     } catch (err) {
       console.error(err);
     } finally {
@@ -355,6 +366,7 @@ function ProviderView({ user }) {
       setJobs(jobs.map(j => j.booking_id === bookingId ? { ...j, status } : j));
       if (status === 'SEARCHING') {
         await api.post(`/provider/job/${bookingId}/accept`, { service_type: jobs.find(job => job.booking_id === bookingId)?.type });
+        router.push(`/active-booking/${bookingId}`);
       } else {
         await api.patch(`/provider/job/${bookingId}/status`, {
           status,
@@ -446,8 +458,13 @@ function ProviderView({ user }) {
               {(job.passenger_name || job.passenger_phone || job.passenger_email || job.passenger?.name) && (
                 <div className="mb-4 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm dark:border-blue-800 dark:bg-blue-900/20">
                   <p className="font-bold text-blue-900 dark:text-blue-200">Passenger contact</p>
-                  <p className="dark:text-gray-200">Name: {job.passenger_name || job.passenger?.name || '—'}</p>
-                  <p className="dark:text-gray-200">Phone: {job.passenger_phone || job.passenger?.phone || '—'}</p>
+                  <div className="my-2 flex items-center gap-3">
+                    <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-full bg-blue-100 text-sm font-bold text-blue-700 dark:bg-blue-900/50 dark:text-blue-200">
+                      {job.passenger_profile_picture ? <img src={job.passenger_profile_picture} alt={`${job.passenger_name || 'Passenger'} profile`} className="h-full w-full object-cover" /> : (job.passenger_name || 'P').split(/\s+/).map(part => part[0]).join('').slice(0, 2).toUpperCase()}
+                    </div>
+                    <p className="font-semibold dark:text-white">{job.passenger_name || job.passenger?.name || 'Passenger'}</p>
+                  </div>
+                  <p className="dark:text-gray-200">Phone: {(job.passenger_phone || job.passenger?.phone) ? <a href={`tel:${job.passenger_phone || job.passenger?.phone}`} className="text-blue-700 hover:underline dark:text-blue-300">{job.passenger_phone || job.passenger?.phone} · Call passenger</a> : '—'}</p>
                   <p className="dark:text-gray-200">Email: {job.passenger_email || job.passenger?.email || '—'}</p>
                 </div>
               )}

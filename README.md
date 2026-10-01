@@ -29,8 +29,14 @@ This project is an application-level prototype. Real railway deployment must fol
 - Cancelled bookings remain available in booking history and account activity
 - Dedicated navigation for active assistance, booking history, notifications, complaint history, and account activity
 - Account settings for every role with editable name and required phone number, optional email, and password changes
+- Optional JPG/JPEG, PNG, or WEBP profile pictures for passengers and providers, with a default initials avatar when no picture is supplied
 - Provider/job status tracking
-- Assigned passengers and providers can securely view each other's name and required phone number; email is shown only when supplied
+- Assigned passengers and providers can securely view each other's name, authorized profile picture, and required phone number; phone numbers are rendered as call links and email is shown only when supplied
+- Provider assignment cards use a non-blocking slide/fade reveal so realtime booking state is updated immediately while the visual transition plays
+- Assigned passengers and providers can use Quick Chat; messages are persisted per booking and delivered live to both participant portals over authenticated Socket.IO
+- Quick Chat also shows a live “is typing…” indicator, debounced while text is entered and automatically cleared when typing stops, a message is sent, or the input loses focus
+- `/active-booking` is the dedicated server-authoritative live service page. It remains available before and after OTP verification, updates from booking events without refresh, and becomes read-only when the booking is cancelled or completed
+- Accepted services use booking-scoped routes at `/active-booking/:id` and `/active-booking/:id/chat`; chat history remains available after completion or cancellation, while new messages are blocked
 - Passenger profile and Good Human Score display
 - Priority booking eligibility
 - Passenger benefits based on Good Human Score

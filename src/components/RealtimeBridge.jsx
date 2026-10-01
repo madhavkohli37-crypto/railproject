@@ -45,6 +45,8 @@ export default function RealtimeBridge() {
     socket.on('booking:started', forward('booking:started'));
     socket.on('booking:completed', forward('booking:completed'));
     socket.on('booking:updated', forward('booking:updated'));
+    socket.on('booking:message', forward('booking:message'));
+    socket.on('booking:typing', forward('booking:typing'));
     socket.on('notification:new', forward('notification:new'));
     socket.on('connect', async () => {
       window.dispatchEvent(new CustomEvent('railassist:connected'));

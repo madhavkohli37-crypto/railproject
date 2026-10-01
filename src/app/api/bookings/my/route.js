@@ -16,16 +16,17 @@ export async function GET(req) {
       .toArray();
     const enriched = await Promise.all(bookings.map(async booking => {
       const services = await Promise.all(booking.services.map(async service => {
-        if (!service.provider_id || service.provider_phone) return service;
+        if (!service.provider_id || (service.provider_phone && service.provider_profile_picture !== undefined)) return service;
         const provider = await db.collection('users').findOne(
           { id: service.provider_id, role: 'PROVIDER' },
-          { projection: { _id: 0, name: 1, phone: 1, email: 1, rating: 1, average_rating: 1 } }
+          { projection: { _id: 0, name: 1, phone: 1, email: 1, profile_picture: 1, rating: 1, average_rating: 1 } }
         );
         return provider ? {
           ...service,
           provider_name: service.provider_name || provider.name,
           provider_phone: provider.phone || null,
           provider_email: provider.email || null,
+          provider_profile_picture: service.provider_profile_picture || provider.profile_picture || null,
           provider_rating: service.provider_rating ?? provider.rating ?? provider.average_rating ?? null,
         } : service;
       }));

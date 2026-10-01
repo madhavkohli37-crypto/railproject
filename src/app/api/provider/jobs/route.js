@@ -12,11 +12,11 @@ export async function GET(req) {
     const bookings = await db.collection('bookings').find({
       status: { $nin: ['CANCELLED', 'COMPLETED'] }, station: provider.station,
       services: { $elemMatch: { type: { $in: types }, status: { $in: ['REQUESTED', 'SEARCHING'] }, provider_id: null } }
-    }).sort({ priority_approved: -1, created_at: 1 }).toArray();
+    }).sort({ priority_approved: -1, created_at: -1 }).toArray();
     const jobs = await Promise.all(bookings.map(async booking => {
       const passenger = await db.collection('users').findOne(
         { id: booking.user_id },
-        { projection: { _id: 0, name: 1, email: 1, phone: 1 } }
+        { projection: { _id: 0, name: 1, email: 1, phone: 1, profile_picture: 1 } }
       );
       return {
       ...booking,

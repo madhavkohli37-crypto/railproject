@@ -49,8 +49,8 @@ app.prepare().then(() => {
     const userId = socket.user.userId;
     socket.join(`user:${userId}`);
     if (socket.user.role === 'PROVIDER') socket.join(`provider:${userId}`);
-    socket.on('booking:subscribe', bookingId => socket.join(`booking:${Number(bookingId)}`));
-    socket.on('booking:unsubscribe', bookingId => socket.leave(`booking:${Number(bookingId)}`));
+    // Booking events are delivered through authenticated user/provider rooms.
+    // Clients do not receive an arbitrary booking-room subscription surface.
     // The browser re-fetches its authorized HTTP resource after reconnect.
     socket.on('booking:sync', callback => callback?.({ reload: true }));
   });

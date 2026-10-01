@@ -22,10 +22,12 @@ export async function PATCH(req, { params }) {
     const db = await getDB();
     const booking = await db.collection('bookings').findOne({
       id: bookingId,
-      status: { $nin: ['CANCELLED', 'COMPLETED', 'REJECTED_OR_CANCELLED'] },
       'services.provider_id': decoded.userId,
     });
     if (!booking) return NextResponse.json({ error: 'You are not assigned to this booking' }, { status: 403 });
+    if (['CANCELLED', 'COMPLETED', 'REJECTED_OR_CANCELLED'].includes(booking.status)) {
+      return NextResponse.json({ error: `This booking is already ${booking.status.toLowerCase().replace(/_/g, ' ')}. No further actions are allowed.` }, { status: 409 });
+    }
     const service = booking.services.find(s => s.provider_id === decoded.userId);
     if (status === 'STARTED') {
       if (service.status !== 'ARRIVED' || !otp) return NextResponse.json({ error: 'Provider must arrive and receive the passenger OTP first' }, { status: 409 });

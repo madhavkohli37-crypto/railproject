@@ -19,7 +19,7 @@ export async function GET(req) {
       const { otp_code, otp_hash, ...safeBooking } = b;
       const passenger = await db.collection('users').findOne(
         { id: b.user_id },
-        { projection: { _id: 0, name: 1, email: 1, phone: 1 } }
+        { projection: { _id: 0, name: 1, email: 1, phone: 1, profile_picture: 1 } }
       );
       return {
         booking_id: b.id,
@@ -38,6 +38,12 @@ export async function GET(req) {
         passenger_email: passenger.email || null,
         passenger_phone: passenger.phone || null,
         ...myService,
+        status: b.status === 'CANCELLED' ? 'CANCELLED' : myService.status,
+        cancellation_reason: b.cancellation_reason || myService.cancellation_reason || null,
+        cancellation_description: b.cancellation_description || myService.cancellation_description || null,
+        cancelled_by: b.cancelled_by || myService.cancelled_by || null,
+        cancelled_at: b.cancelled_at || myService.cancelled_at || null,
+        passenger_profile_picture: passenger.profile_picture || null,
         booking: safeBooking
       };
     }));

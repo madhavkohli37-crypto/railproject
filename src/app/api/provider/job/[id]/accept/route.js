@@ -25,7 +25,7 @@ export async function POST(req, { params }) {
     const now = new Date().toISOString();
     const result = await db.collection('bookings').findOneAndUpdate(
       { id: bookingId, status: { $nin: ['CANCELLED', 'COMPLETED'] }, services: { $elemMatch: { type: service_type, status: { $in: ['REQUESTED', 'SEARCHING', 'REJECTED'] }, provider_id: null, declined_provider_ids: { $ne: decoded.userId } } } },
-      { $set: { 'services.$.provider_id': decoded.userId, 'services.$.provider_name': provider.name, 'services.$.provider_phone': provider.phone || null, 'services.$.provider_rating': provider.rating ?? provider.average_rating ?? null, 'services.$.status': 'ACCEPTED', 'services.$.accepted_at': now, status: 'ACCEPTED', otp_hash: otpHash, otp_code: otp, otp_used: false, updated_at: now } },
+      { $set: { 'services.$.provider_id': decoded.userId, 'services.$.provider_name': provider.name, 'services.$.provider_phone': provider.phone || null, 'services.$.provider_email': provider.email || null, 'services.$.provider_profile_picture': provider.profile_picture || null, 'services.$.provider_rating': provider.rating ?? provider.average_rating ?? null, 'services.$.status': 'ACCEPTED', 'services.$.accepted_at': now, status: 'ACCEPTED', otp_hash: otpHash, otp_code: otp, otp_used: false, updated_at: now } },
       { returnDocument: 'after' }
     );
     const booking = result?.value || result;
